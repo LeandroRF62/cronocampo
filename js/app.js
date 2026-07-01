@@ -1005,8 +1005,8 @@ function renderEquipe() {
             <div class="person-name" style="cursor:pointer;text-decoration:underline dotted" data-person="${escHtml(person)}">${escHtml(person)}</div>
             <div class="person-role">📍 ${escHtml(topLocal)}</div>
           </div>
-          <button class="btn-icon" style="flex-shrink:0" title="Editar colaborador" data-edit-person="${escHtml(person)}">
-            <i class="fas fa-pen" style="font-size:12px"></i>
+          <button class="person-card-edit-btn" title="Editar colaborador" data-edit-person="${escHtml(person)}">
+            <i class="fas fa-pen"></i>
           </button>
         </div>
         <div class="person-stats">
