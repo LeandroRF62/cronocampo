@@ -1001,10 +1001,13 @@ function renderEquipe() {
       <div class="person-card">
         <div class="person-card-head">
           <div class="person-avatar-lg" style="background:${color}">${Store.personInitials(person)}</div>
-          <div>
+          <div style="flex:1">
             <div class="person-name" style="cursor:pointer;text-decoration:underline dotted" data-person="${escHtml(person)}">${escHtml(person)}</div>
             <div class="person-role">📍 ${escHtml(topLocal)}</div>
           </div>
+          <button class="btn-icon" style="flex-shrink:0" title="Editar colaborador" data-edit-person="${escHtml(person)}">
+            <i class="fas fa-pen" style="font-size:12px"></i>
+          </button>
         </div>
         <div class="person-stats">
           <div class="person-stat"><div class="person-stat-v">${mine.length}</div><div class="person-stat-l">Ativ.</div></div>
@@ -1019,6 +1022,13 @@ function renderEquipe() {
 
   el.querySelectorAll('[data-person]').forEach(btn => {
     btn.addEventListener('click', () => openColaboradorAtividades(btn.dataset.person));
+  });
+
+  el.querySelectorAll('[data-edit-person]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      openEditColaborador(btn.dataset.editPerson);
+    });
   });
 }
 
