@@ -1780,10 +1780,10 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '.gbar-lbl{position:absolute;top:50%;transform:translateY(-50%);font-size:9.5px;font-weight:600;white-space:nowrap;z-index:4;padding-left:4px;pointer-events:none}\n';
   html += '.gnrow{left:0;position:absolute;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#0d47a1;white-space:nowrap;max-width:210px;overflow:hidden;text-overflow:ellipsis}\n';
   html += '.ft{text-align:center;font-size:11px;color:#90a4ae;padding:12px;margin-top:16px;border-top:1px solid #eee}\n';
-  html += '@media print{.fi{display:none}.vt{display:none}.w{box-shadow:none;padding:0}.hdr{border-radius:0}}\n';
+  html += '@media print{.fi{display:none}.vt{display:none}.w{box-shadow:none;padding:0}.hdr{border-radius:0;margin:0 0 20px}}\n';
   html += '</style>\n</head>\n<body>\n';
   html += '<div class="w">\n';
-  html += '<div class="hdr"><h1>' + ttl + '</h1><small>Gerado em ' + ts + '</small></div>\n';
+  html += '<div class="hdr"><h1>' + ttl + '</h1></div>\n';
   html += '<div class="fi">\n';
   html += '<label>Inicio: <input type="date" id="fs"/></label>\n';
   html += '<label>Fim: <input type="date" id="fe"/></label>\n';
@@ -1811,7 +1811,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '</tr></thead><tbody id="tb"></tbody></table></div>\n';
   html += '<div id="viewCal" style="display:none"></div>\n';
   html += '<div id="viewGantt" style="display:none"></div>\n';
-  html += '<div class="ft">Gerado em ' + ts + ' &bull; Use Imprimir para salvar PDF</div>\n';
+  html += '<div class="ft">Use Imprimir para salvar PDF</div>\n';
   html += '</div>\n';
 
   // ── JS inline ──
