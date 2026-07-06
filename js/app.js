@@ -1884,8 +1884,9 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '  var cont=document.getElementById("viewCal");var Q=String.fromCharCode(34);\n';
   html += '  if(!tasks.length){cont.innerHTML="<div style="+Q+"text-align:center;padding:40px;color:#999"+Q+">Nenhuma atividade.</div>";return;}\n';
   html += '  var allD=[];tasks.forEach(function(t){(t.periodos||[]).forEach(function(p){if(p.inicio)allD.push(dayjs(p.inicio));if(p.fim)allD.push(dayjs(p.fim));});});\n';
-  html += '  var minM=allD.reduce(function(a,b){return a.isBefore(b)?a:b;}).startOf("month");\n';
-  html += '  var maxM=allD.reduce(function(a,b){return a.isAfter(b)?a:b;}).startOf("month");\n';
+  html += '  var fs=document.getElementById("fs").value;var fe=document.getElementById("fe").value;\n';
+  html += '  var minM=fs?dayjs(fs).startOf("month"):allD.reduce(function(a,b){return a.isBefore(b)?a:b;}).startOf("month");\n';
+  html += '  var maxM=fe?dayjs(fe).startOf("month"):allD.reduce(function(a,b){return a.isAfter(b)?a:b;}).startOf("month");\n';
   html += '  var months=[];var cur=minM;while(cur.isBefore(maxM)||cur.isSame(maxM,"month")){months.push(cur);cur=cur.add(1,"month");}\n';
   html += '  var DOWCAL=["Dom","Seg","Ter","Qua","Qui","Sex","Sab"];var h="";\n';
   html += '  months.forEach(function(m){\n';
@@ -1895,7 +1896,8 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '    for(var i=0;i<sd;i++){row+="<td style="+Q+"background:"+rgba2(mc,.06)+Q+"></td>";col++;}\n';
   html += '    for(var day=1;day<=dim;day++){\n';
   html += '      var date=m.date(day);var isWk=date.day()===0||date.day()===6;var isTd=date.isSame(dayjs().startOf("day"),"day");\n';
-  html += '      var dt=isWk?[]:tasks.filter(function(t){return (t.periodos||[]).some(function(p){if(!p.inicio||!p.fim)return false;var s=dayjs(p.inicio).startOf("day"),e=dayjs(p.fim).startOf("day");return !date.isBefore(s)&&!date.isAfter(e);});});\n';
+  html += '      var inRange=(!fs||!date.isBefore(dayjs(fs)))&&(!fe||!date.isAfter(dayjs(fe)));\n';
+  html += '      var dt=(!inRange||isWk)?[]:tasks.filter(function(t){return (t.periodos||[]).some(function(p){if(!p.inicio||!p.fim)return false;var s=dayjs(p.inicio).startOf("day"),e=dayjs(p.fim).startOf("day");return !date.isBefore(s)&&!date.isAfter(e);});});\n';
   html += '      var ev="";dt.forEach(function(t){var g=sg(t.grupoId);var bCor=getColor(t);var resp=(t.responsaveis||[]).join(", ");var grp=g?g.nome:"";var tag=mkTag(t);ev+="<div class="+Q+"cal-ev"+Q+" style="+Q+"background:"+rgba2(bCor,.13)+";border-left:3px solid "+bCor+Q+" onclick="+Q+"det(\'"+t.id+"\')"+Q+">"+(grp?"<span class="+Q+"cal-ev-grp"+Q+" style="+Q+"color:"+bCor+Q+">"+grp+"</span>":"")+"<span class="+Q+"cal-ev-nome"+Q+">"+t.nome+"</span>"+tag+(resp?"<span class="+Q+"cal-ev-resp"+Q+">"+resp+"</span>":"")+"</div>";});\n';
   html += '      var bg=isTd?rgba2(mc,.18):isWk?rgba2(mc,.08):"#fff";var dnBg=isTd?mc:"transparent";var dnC=isTd?"#fff":isWk?mc:"#263238";\n';
   html += '      row+="<td style="+Q+"background:"+bg+Q+"><div class="+Q+"cal-dn"+Q+" style="+Q+"background:"+dnBg+";color:"+dnC+";font-weight:"+(isTd?700:500)+Q+">"+day+"</div>"+ev+"</td>";\n';
