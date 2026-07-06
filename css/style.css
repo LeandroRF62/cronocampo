@@ -230,6 +230,8 @@ button, input, select, textarea { font-family: inherit; }
 .col-name  { flex:1; padding: 0 8px; overflow:hidden; }
 .col-actions { flex-shrink:0; padding: 0 8px; }
 
+.gantt-left-header .col-name { text-align:center; }
+
 .gantt-left-body { flex:1; overflow-y:auto; overflow-x:hidden; }
 
 /* ---- RESIZER ---- */
