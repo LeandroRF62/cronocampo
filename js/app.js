@@ -1,4 +1,4 @@
-/* ================================================================ 
+/* ================================================================
    app.js – Orquestração principal do CronoCampo v2
    ================================================================ */
 
@@ -1712,9 +1712,9 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '*{margin:0;padding:0;box-sizing:border-box}\n';
   html += 'body{font-family:Inter,Arial,sans-serif;background:#f5f5f5;padding:16px;color:#263238;font-size:13px}\n';
   html += '.w{max-width:100%;margin:0 auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:20px;overflow:hidden}\n';
-  html += '.hdr{background:#1a1a2e;color:#fff;padding:14px 24px;margin:-20px -20px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:16px}\n';
-  html += '.hdr h1{font-size:18px;font-weight:700;flex:1;text-align:center;letter-spacing:.5px}\n';
-  html += '.hdr small{font-size:10px;color:#90a4ae;white-space:nowrap}\n';
+  html += '.hdr{background:#1a1a2e;color:#fff;padding:14px 24px;margin:-20px -20px 20px;border-radius:8px 8px 0 0;position:relative;text-align:center}\n';
+  html += '.hdr h1{font-size:18px;font-weight:700;letter-spacing:.5px;margin:0}\n';
+  html += '.hdr small{position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:10px;color:#90a4ae;white-space:nowrap}\n';
   html += '.fi{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;background:#f8f8f8;border-radius:6px;border:1px solid #e0e0e0;margin-bottom:16px}\n';
   html += '.fi label{font-size:11px;font-weight:600;color:#666;display:flex;align-items:center;gap:4px}\n';
   html += '.fi input,.fi select{padding:5px 9px;border:1px solid #ddd;border-radius:4px;font-size:12px;outline:none}\n';
