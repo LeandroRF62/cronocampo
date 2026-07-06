@@ -567,16 +567,14 @@ function renderChartBody(rows, vStart, numDays, today) {
           bar.appendChild(prog);
         }
 
-        // Resize handles (apenas no último período para simplificar)
-        if (idx === periodos.length - 1) {
-          const resL = document.createElement('div'); 
-          resL.className = 'bar-resize-l';
-          const resR = document.createElement('div'); 
-          resR.className = 'bar-resize-r';
-          bar.appendChild(resL); 
-          bar.appendChild(resR);
-          setupBarResize(resL, resR, wrap, t, vStart, idx);
-        }
+        // Resize handles (em todos os períodos, cada barra é ajustável independentemente)
+        const resL = document.createElement('div'); 
+        resL.className = 'bar-resize-l';
+        const resR = document.createElement('div'); 
+        resR.className = 'bar-resize-r';
+        bar.appendChild(resL); 
+        bar.appendChild(resR);
+        setupBarResize(resL, resR, wrap, t, vStart, idx);
 
         wrap.appendChild(bar);
         body.appendChild(wrap);
