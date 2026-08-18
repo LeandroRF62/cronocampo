@@ -1750,8 +1750,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<option value="Cancelado">Cancelado</option>';
   html += '<option value="Manuten\u00e7\u00e3o">Manuten\u00e7\u00e3o</option>';
   html += '</select></label>\n';
-  html += '<label>Buscar: <input type="text" id="fb" placeholder="EFC, Férias, EFVM..."/></label>\n';
-  html += '<button class="bf" onclick="render()">Filtrar</button>\n';
+  html += '<label>Buscar: <input type="text" id="fb" placeholder="EFC, F\u00e9rias, EFVM..." oninput="render()"/></label>\n';
   html += '<button class="bc" onclick="limpar()">Limpar</button>\n';
   html += '<button class="bp" onclick="window.print()">Imprimir</button>\n';
   html += '<span class="vt">';
@@ -1788,24 +1787,16 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += 'function isFeriado(ds){return FERIADOS[ds]||null;}\n';
   html += 'var currentView="table";\n';
   html += 'function setView(v){currentView=v;["Table","Cal","Gantt"].forEach(function(k){var btn=document.getElementById("vt"+k);if(btn)btn.className=v===k.toLowerCase()?"active":"";var el=document.getElementById("view"+k);if(el)el.style.display=v===k.toLowerCase()?"":"none";});render();}\n';
-  html += 'function _strip(s){';
-  html += '  s=(s||"").toString().toLowerCase();';
-  html += '  var m={"a":"[aáàãâä]","e":"[eéèêë]","i":"[iíìîï]","o":"[oóòõôö]","u":"[uúùûü]","c":"[cç]"};';
-  html += '  return s.replace(/[áàãâä]/g,"a").replace(/[éèêë]/g,"e").replace(/[íìîï]/g,"i").replace(/[óòõôö]/g,"o").replace(/[úùûü]/g,"u").replace(/[ç]/g,"c");';
-  html += '}\n';
+  html += 'function st(s){s=(s||"").toLowerCase();return s.replace(/[\u00e1\u00e0\u00e3\u00e2\u00e4]/g,"a").replace(/[\u00e9\u00e8\u00ea\u00eb]/g,"e").replace(/[\u00ed\u00ec\u00ee\u00ef]/g,"i").replace(/[\u00f3\u00f2\u00f5\u00f4\u00f6]/g,"o").replace(/[\u00fa\u00f9\u00fb\u00fc]/g,"u").replace(/[\u00e7]/g,"c");}\n';
   html += 'function filterTasks(){\n';
   html += '  var fs=document.getElementById("fs").value;\n';
   html += '  var fe=document.getElementById("fe").value;\n';
   html += '  var fst=document.getElementById("fst").value;\n';
   html += '  var fbRaw=document.getElementById("fb").value;\n';
-  html += '  var termos=fbRaw.split(",").map(function(t){return _strip(t.trim());}).filter(function(t){return t.length>0;});\n';
+  html += '  var termos=fbRaw.split(",").map(function(x){return st(x.trim());}).filter(function(x){return x.length>0;});\n';
   html += '  return DATA.tasks.filter(function(t){\n';
   html += '    if(fst&&t.status!==fst)return false;\n';
-  html += '    if(termos.length>0){\n';
-  html += '      var alvo=_strip([t.nome,(t.responsaveis||[]).join(" "),t.local||"",t.obs||""].join(" "));\n';
-  html += '      var ok=termos.some(function(trm){return alvo.indexOf(trm)>=0;});\n';
-  html += '      if(!ok)return false;\n';
-  html += '    }\n';
+  html += '    if(termos.length>0){var alvo=st([t.nome,(t.responsaveis||[]).join(" "),t.local||"",t.obs||""].join(" "));var ok=termos.some(function(tr){return alvo.indexOf(tr)>=0;});if(!ok)return false;}\n';
   html += '    if(fs||fe){var ok2=(t.periodos||[]).some(function(p){\n';
   html += '      if(!p.inicio||!p.fim)return false;\n';
   html += '      var s=dayjs(p.inicio),e=dayjs(p.fim);\n';
@@ -2002,7 +1993,9 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += 'function det(id){var t=DATA.tasks.find(function(x){return x.id===id;});if(!t)return;var per=(t.periodos||[]).map(function(p){return fd(p.inicio)+" - "+fd(p.fim);}).join(", ");alert(t.nome+"\\nPeriodos: "+per+"\\nEquipe: "+(t.responsaveis||[]).join(", ")+"\\nLocal: "+(t.local||"-")+"\\nStatus: "+t.status+(t.obs?"\\nObs: "+t.obs:""));}\n';
   html += 'function limpar(){document.getElementById("fs").value="";document.getElementById("fe").value="";document.getElementById("fst").value="";document.getElementById("fb").value="";render();}\n';
   html += 'document.addEventListener("DOMContentLoaded",function(){render();});\n';
-  html += 'document.getElementById("fb").addEventListener("keydown",function(e){if(e.key==="Enter")render();});\n';
+  html += 'document.getElementById("fs").addEventListener("change",function(){render();});\n';
+  html += 'document.getElementById("fe").addEventListener("change",function(){render();});\n';
+  html += 'document.getElementById("fst").addEventListener("change",function(){render();});\n';
   html += '<\/script>\n</body>\n</html>';
 
   return html;
