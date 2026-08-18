@@ -2087,7 +2087,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '    setTimeout(function(){ov.classList.remove("show");},600);\n';
   html += '  }catch(err){ov.classList.remove("show");alert("Erro: "+err.message);}\n';
   html += '}\n';
-  html += '<\/script>\n</body>\n</html>';\n
+  html += '<\/script>\n</body>\n</html>';
   return html;
 }
 
