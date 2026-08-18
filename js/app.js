@@ -7,21 +7,8 @@ dayjs.locale('pt-br');
 /* ================================================================
    BOOT
    ================================================================ */
-document.addEventListener('DOMContentLoaded', async () => {
-  let restored = false;
-
-  try {
-    const cloud = await CloudSync.carregar();
-    if (cloud.ok && cloud.dados) {
-      Store.loadFromJSON(cloud.dados);
-      Store.save();
-      restored = true;
-    }
-  } catch (e) {
-    console.error('Falha ao conectar ao Supabase, usando dados locais.', e);
-  }
-
-  if (!restored) restored = Store.restore();
+document.addEventListener('DOMContentLoaded', () => {
+  const restored = Store.restore();
   if (!restored) Store.loadSample();
 
   Gantt.init();
@@ -494,7 +481,7 @@ function saveGroup() {
    SALVAR / CARREGAR JSON
    ================================================================ */
 function initSalvar() {
-  document.getElementById('btnBackupJson')?.addEventListener('click', () => {
+  document.getElementById('btnSalvar')?.addEventListener('click', () => {
     const dados  = Store.toJSON();
     const titulo = (document.getElementById('pageTitle')?.textContent || 'CronoCampo').trim();
     const blob   = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
@@ -504,28 +491,7 @@ function initSalvar() {
     a.download   = titulo + '.json';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Backup baixado!', 'success');
-  });
-
-  document.getElementById('btnSalvar')?.addEventListener('click', async () => {
-    const dados = Store.toJSON();
-    Store.save(); // cache local (offline)
-
-    const btn = document.getElementById('btnSalvar');
-    const original = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
-
-    const result = await CloudSync.salvar(dados);
-
-    btn.disabled = false;
-    btn.innerHTML = original;
-
-    if (result.ok) {
-      showToast('Cronograma salvo na nuvem!', 'success');
-    } else {
-      showToast('Salvo localmente, mas falhou ao enviar para a nuvem.', 'error');
-    }
+    showToast('Cronograma salvo!', 'success');
   });
 
   document.getElementById('btnCarregar')?.addEventListener('click', () => {
@@ -1001,13 +967,10 @@ function renderEquipe() {
       <div class="person-card">
         <div class="person-card-head">
           <div class="person-avatar-lg" style="background:${color}">${Store.personInitials(person)}</div>
-          <div style="flex:1">
+          <div>
             <div class="person-name" style="cursor:pointer;text-decoration:underline dotted" data-person="${escHtml(person)}">${escHtml(person)}</div>
             <div class="person-role">📍 ${escHtml(topLocal)}</div>
           </div>
-          <button class="person-card-edit-btn" title="Editar colaborador" data-edit-person="${escHtml(person)}">
-            <i class="fas fa-pen"></i>
-          </button>
         </div>
         <div class="person-stats">
           <div class="person-stat"><div class="person-stat-v">${mine.length}</div><div class="person-stat-l">Ativ.</div></div>
@@ -1022,13 +985,6 @@ function renderEquipe() {
 
   el.querySelectorAll('[data-person]').forEach(btn => {
     btn.addEventListener('click', () => openColaboradorAtividades(btn.dataset.person));
-  });
-
-  el.querySelectorAll('[data-edit-person]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      openEditColaborador(btn.dataset.editPerson);
-    });
   });
 }
 
@@ -1712,9 +1668,9 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '*{margin:0;padding:0;box-sizing:border-box}\n';
   html += 'body{font-family:Inter,Arial,sans-serif;background:#f5f5f5;padding:16px;color:#263238;font-size:13px}\n';
   html += '.w{max-width:100%;margin:0 auto;background:#fff;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,.1);padding:20px;overflow:hidden}\n';
-  html += '.hdr{background:#1a1a2e;color:#fff;padding:14px 24px;margin:-20px -20px 20px;border-radius:8px 8px 0 0;position:relative;text-align:center}\n';
-  html += '.hdr h1{font-size:18px;font-weight:700;letter-spacing:.5px;margin:0}\n';
-  html += '.hdr small{position:absolute;right:24px;top:50%;transform:translateY(-50%);font-size:10px;color:#90a4ae;white-space:nowrap}\n';
+  html += '.hdr{background:#1a1a2e;color:#fff;padding:14px 24px;margin:-20px -20px 20px;border-radius:8px 8px 0 0;display:flex;align-items:center;gap:16px}\n';
+  html += '.hdr h1{font-size:18px;font-weight:700;flex:1;text-align:center;letter-spacing:.5px}\n';
+  html += '.hdr small{font-size:10px;color:#90a4ae;white-space:nowrap}\n';
   html += '.fi{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px;background:#f8f8f8;border-radius:6px;border:1px solid #e0e0e0;margin-bottom:16px}\n';
   html += '.fi label{font-size:11px;font-weight:600;color:#666;display:flex;align-items:center;gap:4px}\n';
   html += '.fi input,.fi select{padding:5px 9px;border:1px solid #ddd;border-radius:4px;font-size:12px;outline:none}\n';
@@ -1780,10 +1736,10 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '.gbar-lbl{position:absolute;top:50%;transform:translateY(-50%);font-size:9.5px;font-weight:600;white-space:nowrap;z-index:4;padding-left:4px;pointer-events:none}\n';
   html += '.gnrow{left:0;position:absolute;top:50%;transform:translateY(-50%);font-size:10px;font-weight:700;color:#0d47a1;white-space:nowrap;max-width:210px;overflow:hidden;text-overflow:ellipsis}\n';
   html += '.ft{text-align:center;font-size:11px;color:#90a4ae;padding:12px;margin-top:16px;border-top:1px solid #eee}\n';
-  html += '@media print{.fi{display:none}.vt{display:none}.w{box-shadow:none;padding:0}.hdr{border-radius:0;margin:0 0 20px}}\n';
+  html += '@media print{.fi{display:none}.vt{display:none}.w{box-shadow:none;padding:0}.hdr{border-radius:0}}\n';
   html += '</style>\n</head>\n<body>\n';
   html += '<div class="w">\n';
-  html += '<div class="hdr"><h1>' + ttl + '</h1></div>\n';
+  html += '<div class="hdr"><h1>' + ttl + '</h1><small>Gerado em ' + ts + '</small></div>\n';
   html += '<div class="fi">\n';
   html += '<label>Inicio: <input type="date" id="fs"/></label>\n';
   html += '<label>Fim: <input type="date" id="fe"/></label>\n';
@@ -1794,7 +1750,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<option value="Cancelado">Cancelado</option>';
   html += '<option value="Manuten\u00e7\u00e3o">Manuten\u00e7\u00e3o</option>';
   html += '</select></label>\n';
-  html += '<label>Buscar: <input type="text" id="fb" placeholder="Nome ou responsavel..."/></label>\n';
+  html += '<label>Buscar: <input type="text" id="fb" placeholder="EFC, F\u00e9rias, EFVM..."/></label>\n';
   html += '<button class="bf" onclick="render()">Filtrar</button>\n';
   html += '<button class="bc" onclick="limpar()">Limpar</button>\n';
   html += '<button class="bp" onclick="window.print()">Imprimir</button>\n';
@@ -1811,7 +1767,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '</tr></thead><tbody id="tb"></tbody></table></div>\n';
   html += '<div id="viewCal" style="display:none"></div>\n';
   html += '<div id="viewGantt" style="display:none"></div>\n';
-  html += '<div class="ft">Use Imprimir para salvar PDF</div>\n';
+  html += '<div class="ft">Gerado em ' + ts + ' &bull; Use Imprimir para salvar PDF</div>\n';
   html += '</div>\n';
 
   // ── JS inline ──
@@ -1832,14 +1788,20 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += 'function isFeriado(ds){return FERIADOS[ds]||null;}\n';
   html += 'var currentView="table";\n';
   html += 'function setView(v){currentView=v;["Table","Cal","Gantt"].forEach(function(k){var btn=document.getElementById("vt"+k);if(btn)btn.className=v===k.toLowerCase()?"active":"";var el=document.getElementById("view"+k);if(el)el.style.display=v===k.toLowerCase()?"":"none";});render();}\n';
+  html += 'function _norm(s){return(s||"").toString().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g,"");}\n';
+  html += 'function _matchBusca(alvo,termos){for(var i=0;i<termos.length;i++){if(_norm(alvo).indexOf(termos[i])>=0)return true;}return false;}\n';
   html += 'function filterTasks(){\n';
   html += '  var fs=document.getElementById("fs").value;\n';
   html += '  var fe=document.getElementById("fe").value;\n';
   html += '  var fst=document.getElementById("fst").value;\n';
-  html += '  var fb=document.getElementById("fb").value.toLowerCase();\n';
+  html += '  var fbRaw=document.getElementById("fb").value;\n';
+  html += '  var termos=fbRaw.split(",").map(function(t){return _norm(t).trim();}).filter(function(t){return t.length>0;});\n';
   html += '  return DATA.tasks.filter(function(t){\n';
   html += '    if(fst&&t.status!==fst)return false;\n';
-  html += '    if(fb){var ok=t.nome.toLowerCase().indexOf(fb)>=0;if(!ok)ok=(t.responsaveis||[]).some(function(r){return r.toLowerCase().indexOf(fb)>=0;});if(!ok)ok=(t.local||"").toLowerCase().indexOf(fb)>=0;if(!ok)return false;}\n';
+  html += '    if(termos.length>0){\n';
+  html += '      var alvo=[t.nome,(t.responsaveis||[]).join(" "),t.local||"",t.status||"",t.obs||""].join(" ");\n';
+  html += '      if(!_matchBusca(alvo,termos))return false;\n';
+  html += '    }\n';
   html += '    if(fs||fe){var ok2=(t.periodos||[]).some(function(p){\n';
   html += '      if(!p.inicio||!p.fim)return false;\n';
   html += '      var s=dayjs(p.inicio),e=dayjs(p.fim);\n';
@@ -1884,9 +1846,8 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '  var cont=document.getElementById("viewCal");var Q=String.fromCharCode(34);\n';
   html += '  if(!tasks.length){cont.innerHTML="<div style="+Q+"text-align:center;padding:40px;color:#999"+Q+">Nenhuma atividade.</div>";return;}\n';
   html += '  var allD=[];tasks.forEach(function(t){(t.periodos||[]).forEach(function(p){if(p.inicio)allD.push(dayjs(p.inicio));if(p.fim)allD.push(dayjs(p.fim));});});\n';
-  html += '  var fs=document.getElementById("fs").value;var fe=document.getElementById("fe").value;\n';
-  html += '  var minM=fs?dayjs(fs).startOf("month"):allD.reduce(function(a,b){return a.isBefore(b)?a:b;}).startOf("month");\n';
-  html += '  var maxM=fe?dayjs(fe).startOf("month"):allD.reduce(function(a,b){return a.isAfter(b)?a:b;}).startOf("month");\n';
+  html += '  var minM=allD.reduce(function(a,b){return a.isBefore(b)?a:b;}).startOf("month");\n';
+  html += '  var maxM=allD.reduce(function(a,b){return a.isAfter(b)?a:b;}).startOf("month");\n';
   html += '  var months=[];var cur=minM;while(cur.isBefore(maxM)||cur.isSame(maxM,"month")){months.push(cur);cur=cur.add(1,"month");}\n';
   html += '  var DOWCAL=["Dom","Seg","Ter","Qua","Qui","Sex","Sab"];var h="";\n';
   html += '  months.forEach(function(m){\n';
@@ -1896,8 +1857,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '    for(var i=0;i<sd;i++){row+="<td style="+Q+"background:"+rgba2(mc,.06)+Q+"></td>";col++;}\n';
   html += '    for(var day=1;day<=dim;day++){\n';
   html += '      var date=m.date(day);var isWk=date.day()===0||date.day()===6;var isTd=date.isSame(dayjs().startOf("day"),"day");\n';
-  html += '      var inRange=(!fs||!date.isBefore(dayjs(fs)))&&(!fe||!date.isAfter(dayjs(fe)));\n';
-  html += '      var dt=(!inRange||isWk)?[]:tasks.filter(function(t){return (t.periodos||[]).some(function(p){if(!p.inicio||!p.fim)return false;var s=dayjs(p.inicio).startOf("day"),e=dayjs(p.fim).startOf("day");return !date.isBefore(s)&&!date.isAfter(e);});});\n';
+  html += '      var dt=isWk?[]:tasks.filter(function(t){return (t.periodos||[]).some(function(p){if(!p.inicio||!p.fim)return false;var s=dayjs(p.inicio).startOf("day"),e=dayjs(p.fim).startOf("day");return !date.isBefore(s)&&!date.isAfter(e);});});\n';
   html += '      var ev="";dt.forEach(function(t){var g=sg(t.grupoId);var bCor=getColor(t);var resp=(t.responsaveis||[]).join(", ");var grp=g?g.nome:"";var tag=mkTag(t);ev+="<div class="+Q+"cal-ev"+Q+" style="+Q+"background:"+rgba2(bCor,.13)+";border-left:3px solid "+bCor+Q+" onclick="+Q+"det(\'"+t.id+"\')"+Q+">"+(grp?"<span class="+Q+"cal-ev-grp"+Q+" style="+Q+"color:"+bCor+Q+">"+grp+"</span>":"")+"<span class="+Q+"cal-ev-nome"+Q+">"+t.nome+"</span>"+tag+(resp?"<span class="+Q+"cal-ev-resp"+Q+">"+resp+"</span>":"")+"</div>";});\n';
   html += '      var bg=isTd?rgba2(mc,.18):isWk?rgba2(mc,.08):"#fff";var dnBg=isTd?mc:"transparent";var dnC=isTd?"#fff":isWk?mc:"#263238";\n';
   html += '      row+="<td style="+Q+"background:"+bg+Q+"><div class="+Q+"cal-dn"+Q+" style="+Q+"background:"+dnBg+";color:"+dnC+";font-weight:"+(isTd?700:500)+Q+">"+day+"</div>"+ev+"</td>";\n';
