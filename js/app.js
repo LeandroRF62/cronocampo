@@ -7,8 +7,21 @@ dayjs.locale('pt-br');
 /* ================================================================
    BOOT
    ================================================================ */
-document.addEventListener('DOMContentLoaded', () => {
-  const restored = Store.restore();
+document.addEventListener('DOMContentLoaded', async () => {
+  let restored = false;
+
+  try {
+    const cloud = await CloudSync.carregar();
+    if (cloud.ok && cloud.dados) {
+      Store.loadFromJSON(cloud.dados);
+      Store.save();
+      restored = true;
+    }
+  } catch (e) {
+    console.error('Falha ao conectar ao Supabase, usando dados locais.', e);
+  }
+
+  if (!restored) restored = Store.restore();
   if (!restored) Store.loadSample();
 
   Gantt.init();
@@ -481,7 +494,30 @@ function saveGroup() {
    SALVAR / CARREGAR JSON
    ================================================================ */
 function initSalvar() {
-  document.getElementById('btnSalvar')?.addEventListener('click', () => {
+  // Botão Salvar → salva na nuvem (Supabase)
+  document.getElementById('btnSalvar')?.addEventListener('click', async () => {
+    const dados = Store.toJSON();
+    Store.save(); // cache local (offline)
+
+    const btn = document.getElementById('btnSalvar');
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+
+    const result = await CloudSync.salvar(dados);
+
+    btn.disabled = false;
+    btn.innerHTML = original;
+
+    if (result.ok) {
+      showToast('Cronograma salvo na nuvem!', 'success');
+    } else {
+      showToast('Salvo localmente, mas falhou ao enviar para a nuvem.', 'error');
+    }
+  });
+
+  // Botão de download (ícone seta) → backup local .json
+  document.getElementById('btnBackupJson')?.addEventListener('click', () => {
     const dados  = Store.toJSON();
     const titulo = (document.getElementById('pageTitle')?.textContent || 'CronoCampo').trim();
     const blob   = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
@@ -491,7 +527,7 @@ function initSalvar() {
     a.download   = titulo + '.json';
     a.click();
     URL.revokeObjectURL(url);
-    showToast('Cronograma salvo!', 'success');
+    showToast('Backup baixado!', 'success');
   });
 
   document.getElementById('btnCarregar')?.addEventListener('click', () => {
