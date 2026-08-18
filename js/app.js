@@ -1716,6 +1716,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>\n';
   html += '<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"/>\n';
   html += '<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"><\/script>\n';
+  html += '<script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/locale/pt-br.js"><\/script>\n';
   html += '<style>\n';
   html += '*{margin:0;padding:0;box-sizing:border-box}\n';
   html += 'body{font-family:Inter,Arial,sans-serif;background:#f5f5f5;padding:16px;color:#263238;font-size:13px}\n';
@@ -1838,6 +1839,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<script>\n';
   html += 'var _b="' + b64 + '";\n';
   html += 'var DATA=JSON.parse(decodeURIComponent(escape(atob(_b))));\n';
+  html += 'dayjs.locale("pt-br");\n';
   html += 'var FERIADOS={"2025-01-01": "Ano Novo", "2025-04-21": "Tiradentes", "2025-05-01": "Dia do Trabalho", "2025-09-07": "Independ\u00eancia do Brasil", "2025-10-12": "Nossa Senhora Aparecida", "2025-11-02": "Finados", "2025-11-15": "Proclama\u00e7\u00e3o da Rep\u00fablica", "2025-11-20": "Consci\u00eancia Negra", "2025-12-25": "Natal", "2026-01-01": "Ano Novo", "2026-04-21": "Tiradentes", "2026-05-01": "Dia do Trabalho", "2026-09-07": "Independ\u00eancia do Brasil", "2026-10-12": "Nossa Senhora Aparecida", "2026-11-02": "Finados", "2026-11-15": "Proclama\u00e7\u00e3o da Rep\u00fablica", "2026-11-20": "Consci\u00eancia Negra", "2026-12-25": "Natal", "2027-01-01": "Ano Novo", "2027-04-21": "Tiradentes", "2027-05-01": "Dia do Trabalho", "2027-09-07": "Independ\u00eancia do Brasil", "2027-10-12": "Nossa Senhora Aparecida", "2027-11-02": "Finados", "2027-11-15": "Proclama\u00e7\u00e3o da Rep\u00fablica", "2027-11-20": "Consci\u00eancia Negra", "2027-12-25": "Natal", "2028-01-01": "Ano Novo", "2028-04-21": "Tiradentes", "2028-05-01": "Dia do Trabalho", "2028-09-07": "Independ\u00eancia do Brasil", "2028-10-12": "Nossa Senhora Aparecida", "2028-11-02": "Finados", "2028-11-15": "Proclama\u00e7\u00e3o da Rep\u00fablica", "2028-11-20": "Consci\u00eancia Negra", "2028-12-25": "Natal", "2025-03-04": "Carnaval", "2025-03-05": "Carnaval", "2025-04-18": "Sexta-feira Santa", "2025-06-19": "Corpus Christi", "2026-02-17": "Carnaval", "2026-02-18": "Carnaval", "2026-04-03": "Sexta-feira Santa", "2026-06-04": "Corpus Christi", "2027-02-09": "Carnaval", "2027-02-10": "Carnaval", "2027-03-26": "Sexta-feira Santa", "2027-05-27": "Corpus Christi", "2028-02-29": "Carnaval", "2028-03-01": "Carnaval", "2028-04-14": "Sexta-feira Santa", "2028-06-15": "Corpus Christi", "2029-02-13": "Carnaval", "2029-02-14": "Carnaval", "2029-03-30": "Sexta-feira Santa", "2029-05-31": "Corpus Christi"};';
   html += '\n';
   html += 'var DOW=["D","S","T","Q","Q","S","S"];\n';
