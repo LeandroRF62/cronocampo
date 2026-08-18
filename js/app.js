@@ -1318,9 +1318,23 @@ async function exportCalendar() {
       });
     }
 
+    // Pega filtro de busca ativo no Gantt
+    const _searchRaw = document.getElementById('ganttSearch')?.value || '';
+    const _terms = _searchRaw.split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
+    function _matchesCal(t) {
+      if (!_terms.length) return true;
+      return _terms.some(term =>
+        (t.nome||'').toLowerCase().includes(term) ||
+        (t.responsaveis||[]).some(r => r.toLowerCase().includes(term)) ||
+        (t.local||'').toLowerCase().includes(term) ||
+        (t.status||'').toLowerCase().includes(term) ||
+        (Store.getGroup(t.grupoId)?.nome||'').toLowerCase().includes(term)
+      );
+    }
     const tasks = Store.getTasks().filter(t => {
       if (t.hidden) return false;
       if (t.grupoId && Store.getGroup(t.grupoId)?.hidden) return false;
+      if (!_matchesCal(t)) return false;
       return (t.periodos || []).some(p => p.inicio && p.fim);
     });
     const groups = Store.getGroups();
@@ -1675,14 +1689,14 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '.fi label{font-size:11px;font-weight:600;color:#666;display:flex;align-items:center;gap:4px}\n';
   html += '.fi input,.fi select{padding:5px 9px;border:1px solid #ddd;border-radius:4px;font-size:12px;outline:none}\n';
   html += '.fi button{padding:6px 14px;border:none;border-radius:4px;cursor:pointer;font-size:12px;font-weight:600}\n';
-  html += '.bf{background:#2e7d32;color:#fff}.bc{background:#e53935;color:#fff}.bp{background:#1565c0;color:#fff}.bpdf{background:#6a1b9a;color:#fff}\n';
-  html += '.pdf-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:9999;align-items:center;justify-content:center;flex-direction:column;gap:16px}\n';
-  html += '.pdf-overlay.show{display:flex}\n';
-  html += '.pdf-box{background:#fff;border-radius:12px;padding:32px 40px;text-align:center;min-width:280px}\n';
-  html += '.pdf-box h3{font-size:15px;font-weight:700;color:#263238;margin-bottom:12px}\n';
-  html += '.pdf-progress{width:100%;height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin-bottom:8px}\n';
-  html += '.pdf-progress-bar{height:100%;background:#6a1b9a;border-radius:4px;transition:width .3s}\n';
-  html += '.pdf-msg{font-size:12px;color:#546e7a}\n';
+  html += '.bf{background:#2e7d32;color:#fff}.bc{background:#e53935;color:#fff}.bp{background:#1565c0;color:#fff}.bimg{background:#6a1b9a;color:#fff}\n';
+  html += '.img-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;align-items:center;justify-content:center}\n';
+  html += '.img-overlay.show{display:flex}\n';
+  html += '.img-box{background:#fff;border-radius:12px;padding:28px 36px;text-align:center;min-width:260px;box-shadow:0 8px 32px rgba(0,0,0,.2)}\n';
+  html += '.img-box h3{font-size:14px;font-weight:700;color:#263238;margin-bottom:12px}\n';
+  html += '.img-prog{width:220px;height:7px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin:0 auto 8px}\n';
+  html += '.img-prog-bar{height:100%;background:#6a1b9a;border-radius:4px;transition:width .3s}\n';
+  html += '.img-msg{font-size:11px;color:#546e7a}\n';
   html += '.vt{display:flex;gap:4px;margin-left:8px}\n';
   html += '.vt button{padding:6px 14px;border:1px solid #ddd;background:#fff;color:#666;font-size:11px;font-weight:600;cursor:pointer;border-radius:4px}\n';
   html += '.vt button.active{background:#1565c0;color:#fff;border-color:#1565c0}\n';
@@ -1760,7 +1774,7 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<label>Buscar: <input type="text" id="fb" placeholder="EFC, F\u00e9rias, EFVM..." oninput="render()"/></label>\n';
   html += '<button class="bc" onclick="limpar()">Limpar</button>\n';
   html += '<button class="bp" onclick="window.print()"><i class="fas fa-print"></i> Imprimir</button>\n';
-  html += '<button class="bpdf" onclick="gerarPDF()"><i class="fas fa-file-pdf"></i> Gerar PDF</button>\n';
+  html += '<button class="bimg" onclick="gerarImagem()"><i class="fas fa-image"></i> Gerar Imagem</button>\n';
   html += '<span class="vt">';
   html += '<button id="vtTable" class="active" onclick="setView(\'table\')"><i class="fas fa-list"></i> Tabela</button>';
   html += '<button id="vtCal" onclick="setView(\'cal\')"><i class="fas fa-calendar-alt"></i> Calendario</button>';
@@ -1776,13 +1790,11 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += '<div id="viewGantt" style="display:none"></div>\n';
   html += '<div class="ft">Gerado em ' + ts + '</div>\n';
   html += '</div>\n';
-  html += '<div class="pdf-overlay" id="pdfOverlay">\n';
-  html += '  <div class="pdf-box">\n';
-  html += '    <h3>Gerando PDF...</h3>\n';
-  html += '    <div class="pdf-progress"><div class="pdf-progress-bar" id="pdfBar" style="width:0%"></div></div>\n';
-  html += '    <div class="pdf-msg" id="pdfMsg">Aguarde...</div>\n';
-  html += '  </div>\n';
-  html += '</div>\n';
+  html += '<div class="img-overlay" id="imgOverlay"><div class="img-box">';
+  html += '<h3>Gerando imagem...</h3>';
+  html += '<div class="img-prog"><div class="img-prog-bar" id="imgBar" style="width:0%"></div></div>';
+  html += '<div class="img-msg" id="imgMsg">Aguarde...</div>';
+  html += '</div></div>\n';
 
   // ── JS inline ──
   html += '<script>\n';
@@ -2011,48 +2023,100 @@ function buildHTMLPage(title, tasks, groups, roster) {
   html += 'document.getElementById("fs").addEventListener("change",function(){render();});\n';
   html += 'document.getElementById("fe").addEventListener("change",function(){render();});\n';
   html += 'document.getElementById("fst").addEventListener("change",function(){render();});\n';
-  html += 'async function gerarPDF(){\n';
-  html += '  var ov=document.getElementById("pdfOverlay");\n';
-  html += '  var bar=document.getElementById("pdfBar");\n';
-  html += '  var msg=document.getElementById("pdfMsg");\n';
-  html += '  ov.classList.add("show");bar.style.width="5%";msg.textContent="Carregando bibliotecas...";\n';
+  html += 'var LOGO_B64="' + LOGO + '";\n';
+  html += 'function _rgba2(hex,a){if(!hex)return "rgba(46,125,50,"+a+")";var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);return "rgba("+r+","+g+","+b+","+a+")";}\n';
+  html += 'function _getColor2(t){var g=sg(t.grupoId);var sm={"Conclu\\u00eddo":"#2e7d32","Cancelado":"#c62828","Em andamento":"#e65100"};if(sm[t.status])return sm[t.status];return g?g.cor:"#1565c0";}\n';
+  html += 'function _getMC(m,tasks){var c={};tasks.forEach(function(t){(t.periodos||[]).forEach(function(p){if(!p.inicio||!p.fim)return;if(dayjs(p.fim).isBefore(m.startOf("month"))||dayjs(p.inicio).isAfter(m.endOf("month")))return;var cor=_getColor2(t);c[cor]=(c[cor]||0)+1;});});var e=Object.entries(c);return e.length?e.sort(function(a,b){return b[1]-a[1];})[0][0]:"#2e7d32";}\n';
+  html += 'function _renderMonthHtml(m,tasks){\n';
+  html += '  var mc=_getMC(m,tasks);var Q=String.fromCharCode(34);\n';
+  html += '  var DOW2=["Dom","Seg","Ter","Qua","Qui","Sex","S\\u00e1b"];\n';
+  html += '  var dim=m.daysInMonth();var sd=m.startOf("month").day();\n';
+  html += '  var dh=DOW2.map(function(d){return "<th style="+Q+"background:"+mc+";color:#fff;padding:7px 4px;font-size:10px;font-weight:700;text-align:center;border:1px solid rgba(255,255,255,.2);width:14.28%"+Q+">"+d+"</th>";}).join("");\n';
+  html += '  var rows="",row="",col=0;\n';
+  html += '  for(var i=0;i<sd;i++){row+="<td style="+Q+"background:"+_rgba2(mc,.06)+";border:1px solid #e8e8e8;vertical-align:top;height:70px;width:14.28%;padding:4px"+Q+"></td>";col++;}\n';
+  html += '  for(var day=1;day<=dim;day++){\n';
+  html += '    var date=m.date(day);var isWk=date.day()===0||date.day()===6;var isTd=date.isSame(dayjs().startOf("day"),"day");\n';
+  html += '    var ds=date.format("YYYY-MM-DD");var holN=FERIADOS[ds]||null;\n';
+  html += '    var dayT=(isWk||holN)?[]:tasks.filter(function(t){return(t.periodos||[]).some(function(p){if(!p.inicio||!p.fim)return false;var s=dayjs(p.inicio).startOf("day"),e=dayjs(p.fim).startOf("day");return !date.isBefore(s)&&!date.isAfter(e);});});\n';
+  html += '    var evHtml=dayT.map(function(t){\n';
+  html += '      var bCor=_getColor2(t);\n';
+  html += '      var grp=sg(t.grupoId)?sg(t.grupoId).nome:"";\n';
+  html += '      var resp=(t.responsaveis||[]).join(", ");\n';
+  html += '      var sm2={"Conclu\\u00eddo":{lb:"CONCLU\\u00cdDO",bg:"#2e7d32"},"Cancelado":{lb:"CANCELADO",bg:"#c62828"},"Em andamento":{lb:"EM ANDAMENTO",bg:"#e65100"},"Planejado":{lb:"PLANEJADO",bg:"#1565c0"},"Manuten\\u00e7\\u00e3o":{lb:"MANUTEN\\u00c7\\u00c3O",bg:"#6a1b9a"}};\n';
+  html += '      var si=sm2[t.status]||{lb:t.status.toUpperCase(),bg:bCor};\n';
+  html += '      var tag="<span style="+Q+"display:inline-block;padding:0 3px;background:"+si.bg+";color:#fff;border-radius:2px;font-size:6px;font-weight:700;margin-left:3px"+Q+">"+si.lb+"</span>";\n';
+  html += '      return "<div style="+Q+"margin:1px 0;padding:2px 4px;background:"+_rgba2(bCor,.13)+";border-left:3px solid "+bCor+";border-radius:2px;font-size:7.5px;line-height:1.35;word-break:break-word"+Q+">"+(grp?"<span style="+Q+"color:"+bCor+";font-weight:700;font-size:6.5px;text-transform:uppercase"+Q+">"+grp+"</span><br>":"")+"<span style="+Q+"font-weight:700"+Q+">"+t.nome+"</span>"+tag+(resp?"<br><span style="+Q+"color:#546e7a;font-size:7px"+Q+">"+resp+"</span>":"")+"</div>";\n';
+  html += '    }).join("");\n';
+  html += '    var holHtml=holN?"<div style="+Q+"margin:1px 0;padding:2px 4px;background:#ffebee;border-left:3px solid #c62828;border-radius:2px;font-size:7.5px;font-weight:700;color:#c62828"+Q+">\uD83C\uDF89 "+holN.toUpperCase()+"</div>":"";\n';
+  html += '    var bg=holN?"#fff5f5":isTd?_rgba2(mc,.18):isWk?_rgba2(mc,.08):"#fff";\n';
+  html += '    var dnBg=isTd?mc:"transparent";var dnC=holN?"#c62828":isTd?"#fff":isWk?mc:"#263238";\n';
+  html += '    row+="<td style="+Q+"background:"+bg+";border:1px solid #e0e0e0;vertical-align:top;height:70px;width:14.28%;padding:4px"+Q+"><div style="+Q+"display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:"+dnBg+";font-size:11px;font-weight:"+(isTd?800:500)+";color:"+dnC+";margin-bottom:2px"+Q+">"+day+"</div>"+holHtml+evHtml+"</td>";\n';
+  html += '    col++;if(col===7||day===dim){if(day===dim&&col<7){for(var x=col;x<7;x++)row+="<td style="+Q+"background:"+_rgba2(mc,.06)+";border:1px solid #e8e8e8;height:70px"+Q+"></td>";}rows+="<tr>"+row+"</tr>";row="";col=0;}\n';
+  html += '  }\n';
+  html += '  var mname=m.format("MMMM").toUpperCase();var myear=m.format("YYYY");\n';
+  html += '  return "<div style="+Q+"font-family:Inter,Arial,sans-serif;background:#fff;padding:16px 20px;width:1122px;box-sizing:border-box"+Q+">"\n';
+  html += '    +"<div style="+Q+"display:flex;align-items:flex-end;gap:10px;margin-bottom:8px"+Q+">"\n';
+  html += '    +"<span style="+Q+"font-size:32px;font-weight:900;color:"+mc+";line-height:1;letter-spacing:-1px"+Q+">"+mname+"</span>"\n';
+  html += '    +"<span style="+Q+"font-size:28px;font-weight:300;color:#546e7a;line-height:1"+Q+">"+myear+"</span></div>"\n';
+  html += '    +"<table style="+Q+"width:100%;border-collapse:collapse;table-layout:fixed"+Q+"><thead><tr>"+dh+"</tr></thead><tbody>"+rows+"</tbody></table></div>";\n';
+  html += '}\n';
+  html += 'async function gerarImagem(){\n';
+  html += '  var ov=document.getElementById("imgOverlay");\n';
+  html += '  var bar=document.getElementById("imgBar");\n';
+  html += '  var msg=document.getElementById("imgMsg");\n';
+  html += '  ov.classList.add("show");bar.style.width="5%";msg.textContent="Carregando biblioteca...";\n';
   html += '  try{\n';
   html += '    if(!window.html2canvas){await new Promise(function(r,j){var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s);});}\n';
-  html += '    if(!window.jspdf){await new Promise(function(r,j){var s=document.createElement("script");s.src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";s.onload=r;s.onerror=j;document.head.appendChild(s);});}\n';
-  html += '    bar.style.width="15%";msg.textContent="Identificando meses...";\n';
+  html += '    bar.style.width="12%";msg.textContent="Calculando meses...";\n';
   html += '    var tasks=filterTasks();\n';
-  html += '    if(!tasks.length){ov.classList.remove("show");alert("Nenhuma atividade para exportar.");return;}\n';
-  html += '    // Renderizar calendário temporariamente para capturar os meses\n';
-  html += '    var prevView=currentView;\n';
-  html += '    document.getElementById("viewCal").style.display="";\n';
-  html += '    renderCal(tasks);\n';
-  html += '    var meses=document.getElementById("viewCal").querySelectorAll(".cal-month");\n';
-  html += '    if(!meses.length){ov.classList.remove("show");alert("Nenhum mês encontrado.");return;}\n';
-  html += '    var jsPDF=window.jspdf.jsPDF;\n';
-  html += '    var pdf=new jsPDF({orientation:"landscape",unit:"mm",format:"a4"});\n';
-  html += '    var pw=pdf.internal.pageSize.getWidth();var ph=pdf.internal.pageSize.getHeight();\n';
-  html += '    for(var i=0;i<meses.length;i++){\n';
-  html += '      var pct=Math.round(15+(i/meses.length)*80);bar.style.width=pct+"%";\n';
-  html += '      var m=meses[i];var mname=m.querySelector(".cal-mname");\n';
-  html += '      msg.textContent="Gerando "+(mname?mname.textContent:"mês "+(i+1))+"...";\n';
-  html += '      await new Promise(function(r){setTimeout(r,30);});\n';
-  html += '      var canvas=await html2canvas(m,{scale:2,useCORS:true,backgroundColor:"#fff",logging:false});\n';
-  html += '      var imgW=pw-10;var imgH=canvas.height*(imgW/canvas.width);\n';
-  html += '      if(imgH>ph-10){imgH=ph-10;imgW=canvas.width*(imgH/canvas.height);}\n';
-  html += '      var x=(pw-imgW)/2;var y=(ph-imgH)/2;\n';
-  html += '      if(i>0)pdf.addPage();\n';
-  html += '      pdf.addImage(canvas.toDataURL("image/jpeg",0.92),"JPEG",x,y,imgW,imgH);\n';
+  html += '    if(!tasks.length){ov.classList.remove("show");alert("Nenhuma atividade encontrada com o filtro atual.");return;}\n';
+  html += '    var allD=[];tasks.forEach(function(t){(t.periodos||[]).forEach(function(p){if(p.inicio)allD.push(dayjs(p.inicio));if(p.fim)allD.push(dayjs(p.fim));});});\n';
+  html += '    var minM=allD.reduce(function(a,b){return a.isBefore(b)?a:b;}).startOf("month");\n';
+  html += '    var maxM=allD.reduce(function(a,b){return a.isAfter(b)?a:b;}).startOf("month");\n';
+  html += '    var months=[];var cur=minM;while(cur.isBefore(maxM)||cur.isSame(maxM,"month")){months.push(cur);cur=cur.add(1,"month");}\n';
+  html += '    // Cabeçalho com logo\n';
+  html += '    var hdrDiv=document.createElement("div");\n';
+  html += '    hdrDiv.style.cssText="position:fixed;left:-9999px;top:0;width:1122px;font-family:Inter,Arial,sans-serif";\n';
+  html += '    hdrDiv.innerHTML="<div style=\\"background:#1a1a2e;padding:14px 24px;display:flex;align-items:center;gap:16px\\">"\n';
+  html += '      +"<div style=\\"background:#fff;border-radius:6px;padding:4px 8px;display:inline-flex;align-items:center\\"><img src=\\""+LOGO_B64+"\\" style=\\"height:30px;object-fit:contain\\"/></div>"\n';
+  html += '      +"<div style=\\"flex:1\\"><div style=\\"font-size:18px;font-weight:800;color:#fff;letter-spacing:-.3px\\">"+DATA.title+"</div>"\n';
+  html += '      +"<div style=\\"font-size:10px;color:#90a4ae;margin-top:1px\\">Gerado em "+dayjs().format("DD/MM/YYYY HH:mm")+"</div></div></div>";\n';
+  html += '    document.body.appendChild(hdrDiv);\n';
+  html += '    await new Promise(function(r){setTimeout(r,80);});\n';
+  html += '    var hdrCanvas=await html2canvas(hdrDiv,{scale:2,useCORS:true,backgroundColor:"#1a1a2e",width:1122,height:hdrDiv.scrollHeight});\n';
+  html += '    document.body.removeChild(hdrDiv);\n';
+  html += '    var canvases=[hdrCanvas];\n';
+  html += '    for(var i=0;i<months.length;i++){\n';
+  html += '      var pct=Math.round(15+(i/months.length)*80);\n';
+  html += '      bar.style.width=pct+"%";\n';
+  html += '      msg.textContent="Gerando "+months[i].format("MMMM/YYYY")+"...";\n';
+  html += '      var tmp=document.createElement("div");\n';
+  html += '      tmp.style.cssText="position:fixed;left:-9999px;top:0";\n';
+  html += '      tmp.innerHTML=_renderMonthHtml(months[i],tasks);\n';
+  html += '      document.body.appendChild(tmp);\n';
+  html += '      await new Promise(function(r){setTimeout(r,40);});\n';
+  html += '      var c=await html2canvas(tmp,{scale:2,useCORS:true,backgroundColor:"#fff",width:1122,height:tmp.scrollHeight});\n';
+  html += '      document.body.removeChild(tmp);\n';
+  html += '      canvases.push(c);\n';
   html += '    }\n';
-  html += '    bar.style.width="98%";msg.textContent="Salvando PDF...";\n';
-  html += '    // Restaurar visão anterior\n';
-  html += '    if(prevView!=="cal"){document.getElementById("viewCal").style.display="none";}\n';
-  html += '    pdf.save(DATA.title.replace(/[^a-zA-Z0-9]/g,"_")+"_Calendario.pdf");\n';
-  html += '    bar.style.width="100%";\n';
-  html += '    setTimeout(function(){ov.classList.remove("show");},800);\n';
+  html += '    bar.style.width="95%";msg.textContent="Montando imagem final...";\n';
+  html += '    var totalW=canvases[0].width;\n';
+  html += '    var totalH=canvases.reduce(function(s,c){return s+c.height;},0);\n';
+  html += '    var final=document.createElement("canvas");\n';
+  html += '    final.width=totalW;final.height=totalH;\n';
+  html += '    var ctx=final.getContext("2d");\n';
+  html += '    ctx.fillStyle="#fff";ctx.fillRect(0,0,totalW,totalH);\n';
+  html += '    var yy=0;canvases.forEach(function(c){ctx.drawImage(c,0,yy);yy+=c.height;});\n';
+  html += '    bar.style.width="100%";msg.textContent="Salvando...";\n';
+  html += '    await new Promise(function(r){setTimeout(r,100);});\n';
+  html += '    var link=document.createElement("a");\n';
+  html += '    link.download=DATA.title.replace(/[^a-zA-Z0-9]/g,"_")+"_Calendario.jpeg";\n';
+  html += '    link.href=final.toDataURL("image/jpeg",0.95);\n';
+  html += '    link.click();\n';
+  html += '    setTimeout(function(){ov.classList.remove("show");},600);\n';
   html += '  }catch(err){ov.classList.remove("show");alert("Erro: "+err.message);}\n';
   html += '}\n';
-  html += '<\/script>\n</body>\n</html>';
-
+  html += '<\/script>\n</body>\n</html>';\n
   return html;
 }
 
