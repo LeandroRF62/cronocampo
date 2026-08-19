@@ -11,7 +11,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   let restored = false;
 
   try {
-    const cloud = await CloudSync.carregar();
+    const _timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 5000));
+    const cloud = await Promise.race([CloudSync.carregar(), _timeout]);
     if (cloud.ok && cloud.dados) {
       Store.loadFromJSON(cloud.dados);
       Store.save();
@@ -541,15 +542,20 @@ function initSalvar() {
     btn.disabled = true;
     btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
 
-    const result = await CloudSync.salvar(dados);
-
-    btn.disabled = false;
-    btn.innerHTML = original;
-
-    if (result.ok) {
-      showToast('Cronograma salvo na nuvem!', 'success');
-    } else {
-      showToast('Salvo localmente, mas falhou ao enviar para a nuvem.', 'error');
+    try {
+      const _timeout = new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000));
+      const result = await Promise.race([CloudSync.salvar(dados), _timeout]);
+      if (result.ok) {
+        showToast('Cronograma salvo na nuvem!', 'success');
+      } else {
+        showToast('Salvo localmente, mas falhou na nuvem.', 'error');
+      }
+    } catch (e) {
+      showToast('Salvo localmente (nuvem indisponível).', 'error');
+      console.error('Erro ao salvar na nuvem:', e);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = original;
     }
   });
 
