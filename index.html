@@ -10,7 +10,6 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/locale/pt-br.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="css/style.css"/>
 </head>
 <body>
@@ -44,11 +43,26 @@
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden/>
     
     <button class="btn-outline" id="btnExportGantt"><i class="fas fa-image"></i> Gantt </button>
-    <button class="btn-outline" id="btnExportCalendar"><i class="fas fa-calendar-alt"></i> Calendário</button>
+    <div class="cal-split" style="display:flex;align-items:center;position:relative;">
+      <button class="btn-outline" id="btnExportCalendar" style="border-radius:4px 0 0 4px;border-right:none;padding-right:10px;">
+        <i class="fas fa-calendar-alt"></i> Calendário
+      </button>
+      <button class="btn-outline" id="btnCalStatusToggle" title="Filtrar por status" style="border-radius:0 4px 4px 0;padding:6px 8px;min-width:28px;">
+        <i class="fas fa-filter" style="font-size:11px"></i>
+      </button>
+      <div id="calStatusMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;min-width:160px;padding:4px 0;margin-top:4px;">
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px;">Filtrar por Status</div>
+        <div class="cal-status-opt" data-status="" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#78909c;display:inline-block"></span> Todos</div>
+        <div class="cal-status-opt" data-status="Planejado" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#1565c0;display:inline-block"></span> Planejado</div>
+        <div class="cal-status-opt" data-status="Em andamento" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#e65100;display:inline-block"></span> Em andamento</div>
+        <div class="cal-status-opt" data-status="Concluído" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#2e7d32;display:inline-block"></span> Concluído</div>
+        <div class="cal-status-opt" data-status="Cancelado" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#c62828;display:inline-block"></span> Cancelado</div>
+        <div class="cal-status-opt" data-status="Manutenção" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;"><span style="width:10px;height:10px;border-radius:50%;background:#6a1b9a;display:inline-block"></span> Manutenção</div>
+      </div>
+    </div>
 	<button class="btn-outline" id="btnExportHTML"><i class="fas fa-code"></i> HTML</button>
 	<button class="btn-outline" id="btnCarregar"><i class="fas fa-folder-open"></i> Carregar</button>
 <input type="file" id="fileInputJson" accept=".json" hidden/>
-    <button class="btn-outline" id="btnBackupJson" title="Baixar backup .json"><i class="fas fa-download"></i></button>
     <button class="btn-outline" id="btnSalvar"><i class="fas fa-save"></i> Salvar</button>
   </div>
 </header>
@@ -371,7 +385,6 @@
 
 <!-- =================== SCRIPTS =================== -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<script src="js/supabase-config.js"></script>
 <script src="js/data.js"></script>
 <script src="js/gantt.js"></script>
 <script src="js/sheets.js"></script>
