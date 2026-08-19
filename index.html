@@ -63,6 +63,7 @@
 	<button class="btn-outline" id="btnExportHTML"><i class="fas fa-code"></i> HTML</button>
 	<button class="btn-outline" id="btnCarregar"><i class="fas fa-folder-open"></i> Carregar</button>
 <input type="file" id="fileInputJson" accept=".json" hidden/>
+    <button class="btn-outline" id="btnBackupJson" title="Baixar backup .json"><i class="fas fa-download"></i></button>
     <button class="btn-outline" id="btnSalvar"><i class="fas fa-save"></i> Salvar</button>
   </div>
 </header>
@@ -380,10 +381,12 @@
   </div>
 </div>
 
-<!-- =================== TOAST ===================  -->
+<!-- =================== TOAST =================== -->
 <div class="toast" id="toast"></div>
 
 <!-- =================== SCRIPTS =================== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/supabase-config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script src="js/data.js"></script>
 <script src="js/gantt.js"></script>
