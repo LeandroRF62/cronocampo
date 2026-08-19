@@ -148,7 +148,44 @@ function initImportExport() {
   document.getElementById('btnAddTaskInline')?.addEventListener('click', () => openTaskModal(null, null));
   document.getElementById('btnAddGroup')?.addEventListener('click', () => openGroupModal(null));
   document.getElementById('btnExportGantt')?.addEventListener('click', exportGanttImage);
-  document.getElementById('btnExportCalendar')?.addEventListener('click', exportCalendar);
+  // ── Calendário: split-button com filtro de status ──
+  let _calStatusFilter = '';
+  const _calMenu = document.getElementById('calStatusMenu');
+  const _calToggle = document.getElementById('btnCalStatusToggle');
+  const _calBtn = document.getElementById('btnExportCalendar');
+
+  _calBtn?.addEventListener('click', () => exportCalendar(_calStatusFilter));
+
+  _calToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_calMenu) _calMenu.style.display = _calMenu.style.display === 'none' ? 'block' : 'none';
+  });
+
+  document.querySelectorAll('.cal-status-opt').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      _calStatusFilter = opt.dataset.status;
+      // Atualizar visual do botão
+      const label = _calStatusFilter || 'Todos';
+      if (_calToggle) {
+        _calToggle.innerHTML = _calStatusFilter
+          ? `<i class="fas fa-filter" style="font-size:11px;color:#e65100"></i>`
+          : `<i class="fas fa-filter" style="font-size:11px"></i>`;
+        _calToggle.title = `Filtro: ${label}`;
+      }
+      if (_calMenu) _calMenu.style.display = 'none';
+      // Destacar opção selecionada
+      document.querySelectorAll('.cal-status-opt').forEach(o => {
+        o.style.background = o.dataset.status === _calStatusFilter ? '#f0f4ff' : '';
+        o.style.fontWeight = o.dataset.status === _calStatusFilter ? '700' : '';
+      });
+    });
+  });
+
+  // Fechar menu ao clicar fora
+  document.addEventListener('click', () => {
+    if (_calMenu) _calMenu.style.display = 'none';
+  });
   document.getElementById('btnExportHTML')?.addEventListener('click', exportarHTML);
 
   document.getElementById('btnShowHidden')?.addEventListener('click', () => {
@@ -1342,7 +1379,7 @@ function showExportNameModal(monthsAvailable) {
 /* ================================================================
    EXPORTAR CALENDÁRIO - JPEG com escolha de nome e meses
    ================================================================ */
-async function exportCalendar() {
+async function exportCalendar(statusFilter) {
   try {
     // Carrega html2canvas se necessário
     if (!window.html2canvas) {
@@ -1373,6 +1410,7 @@ async function exportCalendar() {
       if (t.hidden) return false;
       if (t.grupoId && Store.getGroup(t.grupoId)?.hidden) return false;
       if (!_matchesCal(t)) return false;
+      if (statusFilter && t.status !== statusFilter) return false;
       return (t.periodos || []).some(p => p.inicio && p.fim);
     });
     const groups = Store.getGroups();
