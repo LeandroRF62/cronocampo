@@ -1270,6 +1270,38 @@ function showExportNameModal(monthsAvailable) {
             </div>
           </div>
           
+          <div style="margin-bottom:12px;">
+            <label style="font-size:12px;font-weight:600;color:#333;display:flex;align-items:center;justify-content:space-between;">
+              <span>🏷️ Filtrar por Status</span>
+              <span style="font-size:11px;font-weight:400;color:#999;">
+                <button type="button" id="selectAllStatus" style="border:none;background:none;color:#2e7d32;cursor:pointer;font-weight:600;font-size:11px;padding:0 4px;">Todos</button>
+                <span style="color:#ccc;">|</span>
+                <button type="button" id="deselectAllStatus" style="border:none;background:none;color:#c62828;cursor:pointer;font-weight:600;font-size:11px;padding:0 4px;">Nenhum</button>
+              </span>
+            </label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px;border:1px solid #e8e8e8;border-radius:6px;padding:8px 12px;background:#fafafa;">
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+                <input type="checkbox" class="status-checkbox" value="Planejado" checked style="width:15px;height:15px;accent-color:#1565c0;cursor:pointer;"/>
+                <span style="font-size:12px;font-weight:500;color:#1565c0;">● Planejado</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+                <input type="checkbox" class="status-checkbox" value="Em andamento" checked style="width:15px;height:15px;accent-color:#e65100;cursor:pointer;"/>
+                <span style="font-size:12px;font-weight:500;color:#e65100;">● Em andamento</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+                <input type="checkbox" class="status-checkbox" value="Conclu\u00eddo" checked style="width:15px;height:15px;accent-color:#2e7d32;cursor:pointer;"/>
+                <span style="font-size:12px;font-weight:500;color:#2e7d32;">● Concluído</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+                <input type="checkbox" class="status-checkbox" value="Cancelado" checked style="width:15px;height:15px;accent-color:#c62828;cursor:pointer;"/>
+                <span style="font-size:12px;font-weight:500;color:#c62828;">● Cancelado</span>
+              </label>
+              <label style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:5px;cursor:pointer;">
+                <input type="checkbox" class="status-checkbox" value="Manuten\u00e7\u00e3o" checked style="width:15px;height:15px;accent-color:#6a1b9a;cursor:pointer;"/>
+                <span style="font-size:12px;font-weight:500;color:#6a1b9a;">● Manutenção</span>
+              </label>
+            </div>
+          </div>
           <div style="font-size:11px;color:#999;margin-top:4px;">
             <i class="fas fa-file-image"></i> O arquivo será salvo como <strong>.jpeg</strong>
           </div>
@@ -1326,43 +1358,40 @@ function showExportNameModal(monthsAvailable) {
     document.getElementById('deselectAllMonths')?.addEventListener('click', () => {
       overlay.querySelectorAll('.month-checkbox').forEach(cb => cb.checked = false);
     });
+    document.getElementById('selectAllStatus')?.addEventListener('click', () => {
+      overlay.querySelectorAll('.status-checkbox').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('deselectAllStatus')?.addEventListener('click', () => {
+      overlay.querySelectorAll('.status-checkbox').forEach(cb => cb.checked = false);
+    });
 
     // Confirmar exportação
-    document.getElementById('exportNameConfirm')?.addEventListener('click', () => {
-      // Pega os meses selecionados
+    function _getResult() {
       const selectedIndexes = [];
-      overlay.querySelectorAll('.month-checkbox:checked').forEach(cb => {
-        selectedIndexes.push(parseInt(cb.value));
-      });
-      
-      if (selectedIndexes.length === 0) {
-        showToast('Selecione pelo menos um mês.', 'error');
-        return;
-      }
-
+      overlay.querySelectorAll('.month-checkbox:checked').forEach(cb => selectedIndexes.push(parseInt(cb.value)));
+      if (selectedIndexes.length === 0) { showToast('Selecione pelo menos um mês.', 'error'); return null; }
+      const selectedStatus = [];
+      overlay.querySelectorAll('.status-checkbox:checked').forEach(cb => selectedStatus.push(cb.value));
+      if (selectedStatus.length === 0) { showToast('Selecione pelo menos um status.', 'error'); return null; }
       const name = input.value.trim() || 'Calendario';
+      return { name, selectedIndexes, selectedStatus };
+    }
+    document.getElementById('exportNameConfirm')?.addEventListener('click', () => {
+      const result = _getResult();
+      if (!result) return;
       overlay.remove();
-      resolve({ name, selectedIndexes });
+      resolve(result);
     });
 
     // Enter para confirmar
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Enter') {
-        const selectedIndexes = [];
-        overlay.querySelectorAll('.month-checkbox:checked').forEach(cb => {
-          selectedIndexes.push(parseInt(cb.value));
-        });
-        if (selectedIndexes.length === 0) {
-          showToast('Selecione pelo menos um mês.', 'error');
-          return;
-        }
-        const name = input.value.trim() || 'Calendario';
+        const result = _getResult();
+        if (!result) return;
         overlay.remove();
-        resolve({ name, selectedIndexes });
+        resolve(result);
       }
-      if (e.key === 'Escape') {
-        closeModal();
-      }
+      if (e.key === 'Escape') { closeModal(); }
     });
 
     // Seleciona todo o texto automaticamente
@@ -1416,7 +1445,7 @@ async function exportCalendar(statusFilter) {
       if (t.hidden) return false;
       if (t.grupoId && Store.getGroup(t.grupoId)?.hidden) return false;
       if (!_matchesCal(t)) return false;
-      if (statusFilter && t.status !== statusFilter) return false;
+      if (selectedStatus && selectedStatus.length > 0 && !selectedStatus.includes(t.status)) return false;
       return (t.periodos || []).some(p => p.inicio && p.fim);
     });
     const groups = Store.getGroups();
@@ -1456,7 +1485,7 @@ async function exportCalendar(statusFilter) {
     const result = await showExportNameModal(allMonths);
     if (!result) return; // Usuário cancelou
 
-    const { name, selectedIndexes } = result;
+    const { name, selectedIndexes, selectedStatus } = result;
     const months = selectedIndexes.map(idx => allMonths[idx]);
 
     if (months.length === 0) {
