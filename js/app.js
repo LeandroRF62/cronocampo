@@ -1366,16 +1366,16 @@ function showExportNameModal(monthsAvailable) {
     });
 
     // Confirmar exportação
-    function _getResult() {
-      const selectedIndexes = [];
-      overlay.querySelectorAll('.month-checkbox:checked').forEach(cb => selectedIndexes.push(parseInt(cb.value)));
-      if (selectedIndexes.length === 0) { showToast('Selecione pelo menos um mês.', 'error'); return null; }
-      const selectedStatus = [];
-      overlay.querySelectorAll('.status-checkbox:checked').forEach(cb => selectedStatus.push(cb.value));
-      if (selectedStatus.length === 0) { showToast('Selecione pelo menos um status.', 'error'); return null; }
-      const name = input.value.trim() || 'Calendario';
-      return { name, selectedIndexes, selectedStatus };
-    }
+    var _getResult = function() {
+      var selIdx = [];
+      overlay.querySelectorAll('.month-checkbox:checked').forEach(function(cb){ selIdx.push(parseInt(cb.value)); });
+      if (selIdx.length === 0) { showToast('Selecione pelo menos um mês.', 'error'); return null; }
+      var selSt = [];
+      overlay.querySelectorAll('.status-checkbox:checked').forEach(function(cb){ selSt.push(cb.value); });
+      if (selSt.length === 0) { showToast('Selecione pelo menos um status.', 'error'); return null; }
+      var nm = input.value.trim() || 'Calendario';
+      return { name: nm, selectedIndexes: selIdx, selectedStatus: selSt };
+    };
     document.getElementById('exportNameConfirm')?.addEventListener('click', () => {
       const result = _getResult();
       if (!result) return;
@@ -1445,7 +1445,6 @@ async function exportCalendar(statusFilter) {
       if (t.hidden) return false;
       if (t.grupoId && Store.getGroup(t.grupoId)?.hidden) return false;
       if (!_matchesCal(t)) return false;
-      if (selectedStatus && selectedStatus.length > 0 && !selectedStatus.includes(t.status)) return false;
       return (t.periodos || []).some(p => p.inicio && p.fim);
     });
     const groups = Store.getGroups();
@@ -1487,6 +1486,14 @@ async function exportCalendar(statusFilter) {
 
     const { name, selectedIndexes, selectedStatus } = result;
     const months = selectedIndexes.map(idx => allMonths[idx]);
+    // Aplicar filtro de status escolhido no modal
+    const filteredTasks = tasks.filter(t =>
+      !selectedStatus || selectedStatus.length === 0 || selectedStatus.includes(t.status)
+    );
+    if (filteredTasks.length === 0) {
+      showToast('Nenhuma atividade com os status selecionados.', 'error');
+      return;
+    }
 
     if (months.length === 0) {
       showToast('Nenhum mês selecionado.', 'error');
@@ -1516,7 +1523,7 @@ async function exportCalendar(statusFilter) {
 
     function getMonthColor(m) {
       const c = {};
-      tasks.forEach(t => {
+      filteredTasks.forEach(t => {
         (t.periodos || []).forEach(p => {
           if (!p.inicio || !p.fim) return;
           if (dayjs(p.fim).isBefore(m.startOf('month')) || dayjs(p.inicio).isAfter(m.endOf('month'))) return;
@@ -1553,7 +1560,7 @@ async function exportCalendar(statusFilter) {
         const holName = typeof FERIADOS !== 'undefined' ? FERIADOS.get(ds) : null;
         const isHoliday = !!holName;
 
-        const dayTasks = (isWeekend || isHoliday) ? [] : tasks.filter(t => {
+        const dayTasks = (isWeekend || isHoliday) ? [] : filteredTasks.filter(t => {
           return (t.periodos || []).some(p => {
             if (!p.inicio || !p.fim) return false;
             const s = dayjs(p.inicio).startOf('day');
