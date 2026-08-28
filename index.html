@@ -11,6 +11,11 @@
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/dayjs.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/dayjs@1.11.10/locale/pt-br.js"></script>
   <link rel="stylesheet" href="css/style.css"/>
+  <style>
+    .arq-opt:hover, .cal-status-opt:hover { background:#f1f5f9; }
+    .arq-opt { transition:background .15s; }
+    .cal-status-opt { transition:background .15s; }
+  </style>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js"></script>
   <script>
@@ -54,17 +59,63 @@
     <button class="btn-icon" id="btnUndo" title="Desfazer (Ctrl+Z)"><i class="fas fa-undo"></i></button>
     <button class="btn-icon" id="btnRedo" title="Refazer (Ctrl+Y)"><i class="fas fa-redo"></i></button>
     
-    <button class="btn-outline" id="btnImport" onclick="document.getElementById('fileInput').click()">
-      <i class="fas fa-file-excel"></i> Importar
-    </button>
     <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden/>
-    
+    <input type="file" id="fileInputJson" accept=".json" hidden/>
+
     <button class="btn-outline" id="btnExportGantt"><i class="fas fa-image"></i> Gantt </button>
-    <button class="btn-outline" id="btnExportCalendar"><i class="fas fa-calendar-alt"></i> Calendário</button>
-	<button class="btn-outline" id="btnExportHTML"><i class="fas fa-code"></i> HTML</button>
-	<button class="btn-outline" id="btnCarregar"><i class="fas fa-folder-open"></i> Carregar</button>
-<input type="file" id="fileInputJson" accept=".json" hidden/>
-    <button class="btn-outline" id="btnBackupJson" title="Baixar backup .json"><i class="fas fa-download"></i></button>
+
+    <!-- Calendário com filtro de status -->
+    <div class="cal-split" style="display:flex;align-items:center;position:relative;">
+      <button class="btn-outline" id="btnExportCalendar" style="border-radius:4px 0 0 4px;border-right:none;padding-right:10px;">
+        <i class="fas fa-calendar-alt"></i> Calendário
+      </button>
+      <button class="btn-outline" id="btnCalStatusToggle" title="Filtrar por status" style="border-radius:0 4px 4px 0;padding:6px 8px;min-width:28px;">
+        <i class="fas fa-filter" style="font-size:11px"></i>
+      </button>
+      <div id="calStatusMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;min-width:160px;padding:4px 0;margin-top:4px;">
+        <div style="padding:6px 12px;font-size:10px;font-weight:700;color:#90a4ae;text-transform:uppercase;letter-spacing:.5px;">Filtrar por Status</div>
+        <div class="cal-status-opt" data-status="" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#78909c;display:inline-block"></span> Todos</div>
+        <div class="cal-status-opt" data-status="Planejado" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#1565c0;display:inline-block"></span> Planejado</div>
+        <div class="cal-status-opt" data-status="Em andamento" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#e65100;display:inline-block"></span> Em andamento</div>
+        <div class="cal-status-opt" data-status="Concluído" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#2e7d32;display:inline-block"></span> Concluído</div>
+        <div class="cal-status-opt" data-status="Cancelado" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#c62828;display:inline-block"></span> Cancelado</div>
+        <div class="cal-status-opt" data-status="Manutenção" style="padding:8px 14px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:#263238;"><span style="width:10px;height:10px;border-radius:50%;background:#6a1b9a;display:inline-block"></span> Manutenção</div>
+      </div>
+    </div>
+
+    <button class="btn-outline" id="btnExportHTML"><i class="fas fa-code"></i> HTML</button>
+
+    <!-- Menu Arquivo: Importar / Carregar / Backup -->
+    <div class="arq-wrap" style="position:relative;display:flex;align-items:center;">
+      <button class="btn-outline" id="btnArquivoToggle" title="Importar, carregar e backup">
+        <i class="fas fa-folder"></i> Arquivo <i class="fas fa-chevron-down" style="font-size:9px;margin-left:2px;opacity:.7"></i>
+      </button>
+      <div id="arquivoMenu" style="display:none;position:absolute;top:100%;right:0;background:#fff;border:1px solid #e0e0e0;border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:200;min-width:230px;padding:4px 0;margin-top:4px;">
+        <div class="arq-opt" id="optImportar" style="padding:10px 14px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;gap:10px;color:#263238;">
+          <i class="fas fa-file-excel" style="color:#2e7d32;width:15px"></i>
+          <div>
+            <div style="font-weight:600">Importar planilha</div>
+            <div style="font-size:10.5px;color:#90a4ae">Excel ou CSV &mdash; substitui tudo</div>
+          </div>
+        </div>
+        <div class="arq-opt" id="optCarregar" style="padding:10px 14px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;gap:10px;color:#263238;">
+          <i class="fas fa-folder-open" style="color:#1565c0;width:15px"></i>
+          <div>
+            <div style="font-weight:600">Carregar backup</div>
+            <div style="font-size:10.5px;color:#90a4ae">Restaurar de um arquivo .json</div>
+          </div>
+        </div>
+        <div style="height:1px;background:#eee;margin:4px 0"></div>
+        <div class="arq-opt" id="optBackup" style="padding:10px 14px;cursor:pointer;font-size:12.5px;display:flex;align-items:center;gap:10px;color:#263238;">
+          <i class="fas fa-download" style="color:#6a1b9a;width:15px"></i>
+          <div>
+            <div style="font-weight:600">Baixar backup</div>
+            <div style="font-size:10.5px;color:#90a4ae">Salvar cópia .json no computador</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <button class="btn-outline" id="btnSalvar"><i class="fas fa-save"></i> Salvar</button>
     <div style="display:flex;align-items:center;gap:8px;margin-left:10px;padding-left:12px;border-left:1px solid rgba(255,255,255,.18);">
       <span id="userEmail" style="font-size:11px;color:#90a4ae;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
