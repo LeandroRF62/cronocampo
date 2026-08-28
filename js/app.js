@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initUndoRedo();
   initSalvar();
   initDrillModal();
+  initAuth();
 
   document.getElementById('topbarDate').textContent = dayjs().format('ddd DD/MM/YY').replace(/^\w/, c => c.toUpperCase());
 
@@ -526,6 +527,30 @@ function saveGroup() {
   renderDashboard();
   closeModal('groupOverlay');
   showToast(_editingGroupId ? 'Grupo atualizado!' : 'Grupo criado!', 'success');
+}
+
+/* ================================================================
+   AUTENTICACAO - usuario logado e botao Sair
+   ================================================================ */
+function initAuth() {
+  // Mostra o e-mail do usuario logado
+  const user = window.__USUARIO__;
+  const spanEmail = document.getElementById('userEmail');
+  if (spanEmail && user?.email) {
+    spanEmail.textContent = user.email;
+    spanEmail.title = user.email;
+  }
+
+  // Botao Sair
+  document.getElementById('btnSair')?.addEventListener('click', async () => {
+    if (!confirm('Deseja sair do sistema?')) return;
+    try {
+      await supabaseClient.auth.signOut();
+    } catch (e) {
+      console.error('Erro ao sair:', e);
+    }
+    window.location.replace('login.html');
+  });
 }
 
 /* ================================================================
