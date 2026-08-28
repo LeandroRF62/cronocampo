@@ -129,7 +129,28 @@ function initNavTabs() {
 function initImportExport() {
   const fileInput = document.getElementById('fileInput');
 
-  document.getElementById('btnImport')?.addEventListener('click', () => fileInput.click());
+  // ── Menu Arquivo (Importar / Carregar / Backup) ──
+  const _arqMenu   = document.getElementById('arquivoMenu');
+  const _arqToggle = document.getElementById('btnArquivoToggle');
+
+  _arqToggle?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_arqMenu) _arqMenu.style.display = _arqMenu.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', () => {
+    if (_arqMenu) _arqMenu.style.display = 'none';
+  });
+
+  document.getElementById('optImportar')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_arqMenu) _arqMenu.style.display = 'none';
+    fileInput.click();
+  });
+  document.getElementById('optCarregar')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (_arqMenu) _arqMenu.style.display = 'none';
+    document.getElementById('fileInputJson')?.click();
+  });
   fileInput?.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -585,7 +606,9 @@ function initSalvar() {
   });
 
   // Botão de download (ícone seta) → backup local .json
-  document.getElementById('btnBackupJson')?.addEventListener('click', () => {
+  document.getElementById('optBackup')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('arquivoMenu').style.display = 'none';
     const dados  = Store.toJSON();
     const titulo = (document.getElementById('pageTitle')?.textContent || 'CronoCampo').trim();
     const blob   = new Blob([JSON.stringify(dados, null, 2)], { type: 'application/json' });
@@ -598,9 +621,6 @@ function initSalvar() {
     showToast('Backup baixado!', 'success');
   });
 
-  document.getElementById('btnCarregar')?.addEventListener('click', () => {
-    document.getElementById('fileInputJson').click();
-  });
 
   document.getElementById('fileInputJson')?.addEventListener('change', e => {
     const file = e.target.files[0];
