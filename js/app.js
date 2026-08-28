@@ -763,7 +763,6 @@ function renderDashboard() {
   const tasks  = Store.getTasks();
   const groups = Store.getGroups();
   const today  = dayjs().startOf('day');
-  const fimSemana = today.add(14, 'day');
 
   const total     = tasks.length;
   const peopleSet = new Set(tasks.flatMap(t => t.responsaveis||[]));
@@ -859,17 +858,28 @@ function renderDashboard() {
     openDrill(`<i class="fas fa-folder"></i> &nbsp;${escHtml(label)}`, list);
   });
 
-  // ── Próximos 14 dias ──
-  const proxList = tasks.filter(t => {
+  // ── Semana atual e próxima semana (segunda a domingo) ──
+  // dayjs().day(): 0=dom, 1=seg ... 6=sab
+  const _dow          = today.day();
+  const _diasDesdeSeg = (_dow === 0) ? 6 : (_dow - 1);
+  const iniSemAtual   = today.subtract(_diasDesdeSeg, 'day').startOf('day');
+  const fimSemAtual   = iniSemAtual.add(6, 'day').startOf('day');
+  const iniProxSem    = iniSemAtual.add(7, 'day').startOf('day');
+  const fimProxSem    = iniProxSem.add(6, 'day').startOf('day');
+
+  // Uma atividade entra na semana se algum período cruzar o intervalo
+  function _naSemana(t, ini, fim) {
     if (t.status === 'Concluído' || t.status === 'Cancelado') return false;
-    const periodos = t.periodos || [];
-    return periodos.some(p => {
+    return (t.periodos || []).some(p => {
       if (!p.inicio || !p.fim) return false;
       const s = dayjs(p.inicio).startOf('day');
       const e = dayjs(p.fim).startOf('day');
-      return e.isAfter(today) && s.isBefore(fimSemana.add(1, 'day'));
+      return !e.isBefore(ini) && !s.isAfter(fim);
     });
-  }).filter(t => !hojeList.includes(t));
+  }
+
+  const semAtualList = tasks.filter(t => _naSemana(t, iniSemAtual, fimSemAtual));
+  const proxSemList  = tasks.filter(t => _naSemana(t, iniProxSem,  fimProxSem));
 
   const renderItem = t => {
     const color = Store.STATUS_COLORS[t.status]||'#90a4ae';
@@ -894,13 +904,34 @@ function renderDashboard() {
     ? hojeList.map(renderItem).join('')
     : '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Nenhuma atividade para hoje</div>';
 
-  document.getElementById('badgeProx').textContent = proxList.length;
-  const listaProx = document.getElementById('listaProx');
-  listaProx.innerHTML = proxList.length
-    ? proxList.map(renderItem).join('')
-    : '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Nenhuma atividade para os próximos 14 dias</div>';
+  // ── Esta Semana ──
+  const _fmtIntervalo = (a, b) => a.format('DD/MM') + ' a ' + b.format('DD/MM');
 
-  [listaHoje, listaProx].forEach(lista => {
+  const lblSemAtual = document.getElementById('labelSemanaAtual');
+  if (lblSemAtual) lblSemAtual.textContent = _fmtIntervalo(iniSemAtual, fimSemAtual);
+  const bdgSemAtual = document.getElementById('badgeSemanaAtual');
+  if (bdgSemAtual) bdgSemAtual.textContent = semAtualList.length;
+  const listaSemAtual = document.getElementById('listaSemanaAtual');
+  if (listaSemAtual) {
+    listaSemAtual.innerHTML = semAtualList.length
+      ? semAtualList.map(renderItem).join('')
+      : '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Nenhuma atividade nesta semana</div>';
+  }
+
+  // ── Próxima Semana ──
+  const lblProxSem = document.getElementById('labelProxSemana');
+  if (lblProxSem) lblProxSem.textContent = _fmtIntervalo(iniProxSem, fimProxSem);
+  const bdgProxSem = document.getElementById('badgeProxSemana');
+  if (bdgProxSem) bdgProxSem.textContent = proxSemList.length;
+  const listaProxSem = document.getElementById('listaProxSemana');
+  if (listaProxSem) {
+    listaProxSem.innerHTML = proxSemList.length
+      ? proxSemList.map(renderItem).join('')
+      : '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Nenhuma atividade na próxima semana</div>';
+  }
+
+  [listaHoje, listaSemAtual, listaProxSem].forEach(lista => {
+    if (!lista) return;
     lista.querySelectorAll('[data-taskid]').forEach(row => {
       row.addEventListener('click', () => openTaskModal(row.dataset.taskid));
     });
