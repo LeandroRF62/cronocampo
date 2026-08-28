@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>Redefinir senha – Cronograma MecRoc</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Inter',sans-serif;
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#fdf0e3 0%,#fce9d6 50%,#fbe3c9 100%);
+  padding:24px;
+}
+.card{
+  background:#fff;border-radius:16px;
+  box-shadow:0 24px 64px rgba(0,0,0,.12);
+  padding:48px 44px;width:100%;max-width:440px;
+}
+.icon-top{
+  width:64px;height:64px;background:#e8f5e9;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 24px;
+}
+.icon-top i{font-size:26px;color:#2e7d32}
+h1{font-size:24px;font-weight:800;color:#1a1a2e;text-align:center;margin-bottom:8px}
+.sub{font-size:14px;color:#5a6b8c;text-align:center;margin-bottom:32px;line-height:1.6}
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13px;font-weight:600;color:#1a1a2e;margin-bottom:8px}
+.field input{
+  width:100%;padding:14px 16px;border:1px solid #e3e8f0;border-radius:10px;
+  font-size:14px;font-family:inherit;background:#f8fafc;outline:none;
+  transition:border-color .18s, box-shadow .18s, background .18s;
+}
+.field input:focus{border-color:#2e7d32;background:#fff;box-shadow:0 0 0 3px rgba(46,125,50,.11)}
+.btn{
+  width:100%;padding:15px;background:#1a1a2e;color:#fff;border:none;border-radius:10px;
+  font-size:15px;font-weight:700;font-family:inherit;cursor:pointer;margin-top:14px;
+  transition:background .18s,transform .18s;
+}
+.btn:hover:not(:disabled){background:#12121f;transform:translateY(-1px)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.msg{margin-top:18px;padding:13px 16px;border-radius:9px;font-size:13px;display:none;line-height:1.5}
+.msg.show{display:block}
+.msg.error{background:#fee2e2;color:#b91c1c;border:1px solid #fecaca}
+.msg.success{background:#dcfce7;color:#15803d;border:1px solid #bbf7d0}
+.voltar{display:block;text-align:center;margin-top:20px;font-size:13.5px;color:#2563eb;text-decoration:none;font-weight:600}
+.voltar:hover{text-decoration:underline}
+.hint{font-size:11.5px;color:#9aa8c0;margin-top:6px}
+</style>
+</head>
+<body>
+
+<div class="card">
+  <div class="icon-top"><i class="fas fa-key"></i></div>
+  <h1>Definir nova senha</h1>
+  <div class="sub">Escolha uma senha com pelo menos 6 caracteres.</div>
+
+  <div class="field">
+    <label for="nova">Nova senha</label>
+    <input type="password" id="nova" placeholder="••••••••" autocomplete="new-password"/>
+    <div class="hint">Mínimo de 6 caracteres</div>
+  </div>
+
+  <div class="field">
+    <label for="confirma">Confirmar nova senha</label>
+    <input type="password" id="confirma" placeholder="••••••••" autocomplete="new-password"/>
+  </div>
+
+  <button class="btn" id="btnSalvar">Salvar nova senha</button>
+
+  <div class="msg" id="msg"></div>
+
+  <a href="login.html" class="voltar">Voltar para o login</a>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+function showMsg(t, tipo) {
+  const el = $('msg');
+  el.textContent = t;
+  el.className = 'msg show ' + tipo;
+}
+
+async function salvarSenha() {
+  const nova = $('nova').value;
+  const conf = $('confirma').value;
+
+  if (nova.length < 6) { showMsg('A senha precisa ter pelo menos 6 caracteres.', 'error'); return; }
+  if (nova !== conf)   { showMsg('As senhas não conferem.', 'error'); return; }
+
+  const btn = $('btnSalvar');
+  btn.disabled = true;
+  btn.textContent = 'Salvando...';
+
+  try {
+    const { error } = await supabaseClient.auth.updateUser({ password: nova });
+    if (error) {
+      showMsg('Erro: ' + error.message, 'error');
+      btn.disabled = false;
+      btn.textContent = 'Salvar nova senha';
+      return;
+    }
+    showMsg('Senha alterada! Redirecionando para o login...', 'success');
+    setTimeout(() => { window.location.href = 'login.html'; }, 1600);
+  } catch (e) {
+    showMsg('Falha de conexão.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Salvar nova senha';
+  }
+}
+
+$('btnSalvar').addEventListener('click', salvarSenha);
+['nova','confirma'].forEach(id => {
+  $(id).addEventListener('keydown', e => { if (e.key === 'Enter') salvarSenha(); });
+});
+$('nova').focus();
+</script>
+
+</body>
+</html>
