@@ -129,28 +129,6 @@ function initNavTabs() {
 function initImportExport() {
   const fileInput = document.getElementById('fileInput');
 
-  // ── Menu Arquivo (Importar / Carregar / Backup) ──
-  const _arqMenu   = document.getElementById('arquivoMenu');
-  const _arqToggle = document.getElementById('btnArquivoToggle');
-
-  _arqToggle?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (_arqMenu) _arqMenu.style.display = _arqMenu.style.display === 'none' ? 'block' : 'none';
-  });
-  document.addEventListener('click', () => {
-    if (_arqMenu) _arqMenu.style.display = 'none';
-  });
-
-  document.getElementById('optImportar')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (_arqMenu) _arqMenu.style.display = 'none';
-    fileInput.click();
-  });
-  document.getElementById('optCarregar')?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (_arqMenu) _arqMenu.style.display = 'none';
-    document.getElementById('fileInputJson')?.click();
-  });
   fileInput?.addEventListener('change', e => {
     const file = e.target.files[0];
     if (!file) return;
@@ -170,46 +148,36 @@ function initImportExport() {
 
   document.getElementById('btnAddTaskInline')?.addEventListener('click', () => openTaskModal(null, null));
   document.getElementById('btnAddGroup')?.addEventListener('click', () => openGroupModal(null));
-  document.getElementById('btnExportGantt')?.addEventListener('click', exportGanttImage);
-  // ── Calendário: split-button com filtro de status ──
-  let _calStatusFilter = '';
-  const _calMenu = document.getElementById('calStatusMenu');
-  const _calToggle = document.getElementById('btnCalStatusToggle');
-  const _calBtn = document.getElementById('btnExportCalendar');
+  // ── Menu Arquivo: exportar, importar e backup ──
+  const _arqMenu   = document.getElementById('arquivoMenu');
+  const _arqToggle = document.getElementById('btnArquivoToggle');
+  const _fecharArq = () => { if (_arqMenu) _arqMenu.style.display = 'none'; };
 
-  _calBtn?.addEventListener('click', () => exportCalendar(_calStatusFilter));
-
-  _calToggle?.addEventListener('click', (e) => {
+  _arqToggle?.addEventListener('click', (e) => {
     e.stopPropagation();
-    if (_calMenu) _calMenu.style.display = _calMenu.style.display === 'none' ? 'block' : 'none';
+    if (_arqMenu) _arqMenu.style.display = _arqMenu.style.display === 'none' ? 'block' : 'none';
+  });
+  document.addEventListener('click', _fecharArq);
+  _arqMenu?.addEventListener('click', (e) => e.stopPropagation());
+
+  // Exportar
+  document.getElementById('optGantt')?.addEventListener('click', () => {
+    _fecharArq(); exportGanttImage();
+  });
+  document.getElementById('optCalendario')?.addEventListener('click', () => {
+    _fecharArq(); exportCalendar();
+  });
+  document.getElementById('optHTML')?.addEventListener('click', () => {
+    _fecharArq(); exportarHTML();
   });
 
-  document.querySelectorAll('.cal-status-opt').forEach(opt => {
-    opt.addEventListener('click', (e) => {
-      e.stopPropagation();
-      _calStatusFilter = opt.dataset.status;
-      // Atualizar visual do botão
-      const label = _calStatusFilter || 'Todos';
-      if (_calToggle) {
-        _calToggle.innerHTML = _calStatusFilter
-          ? `<i class="fas fa-filter" style="font-size:11px;color:#e65100"></i>`
-          : `<i class="fas fa-filter" style="font-size:11px"></i>`;
-        _calToggle.title = `Filtro: ${label}`;
-      }
-      if (_calMenu) _calMenu.style.display = 'none';
-      // Destacar opção selecionada
-      document.querySelectorAll('.cal-status-opt').forEach(o => {
-        o.style.background = o.dataset.status === _calStatusFilter ? '#f0f4ff' : '';
-        o.style.fontWeight = o.dataset.status === _calStatusFilter ? '700' : '';
-      });
-    });
+  // Dados
+  document.getElementById('optImportar')?.addEventListener('click', () => {
+    _fecharArq(); fileInput.click();
   });
-
-  // Fechar menu ao clicar fora
-  document.addEventListener('click', () => {
-    if (_calMenu) _calMenu.style.display = 'none';
+  document.getElementById('optCarregar')?.addEventListener('click', () => {
+    _fecharArq(); document.getElementById('fileInputJson')?.click();
   });
-  document.getElementById('btnExportHTML')?.addEventListener('click', exportarHTML);
 
   document.getElementById('btnShowHidden')?.addEventListener('click', () => {
     const newVal = !Store.getShowHidden();
