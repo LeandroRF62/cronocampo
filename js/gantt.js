@@ -567,14 +567,16 @@ function renderChartBody(rows, vStart, numDays, today) {
           bar.appendChild(prog);
         }
 
-        // Resize handles (em todos os períodos, cada barra é ajustável independentemente)
-        const resL = document.createElement('div'); 
-        resL.className = 'bar-resize-l';
-        const resR = document.createElement('div'); 
-        resR.className = 'bar-resize-r';
-        bar.appendChild(resL); 
-        bar.appendChild(resR);
-        setupBarResize(resL, resR, wrap, t, vStart, idx);
+        // Resize handles (apenas no último período para simplificar)
+        if (idx === periodos.length - 1) {
+          const resL = document.createElement('div'); 
+          resL.className = 'bar-resize-l';
+          const resR = document.createElement('div'); 
+          resR.className = 'bar-resize-r';
+          bar.appendChild(resL); 
+          bar.appendChild(resR);
+          setupBarResize(resL, resR, wrap, t, vStart, idx);
+        }
 
         wrap.appendChild(bar);
         body.appendChild(wrap);
@@ -846,14 +848,30 @@ function renderChartBody(rows, vStart, numDays, today) {
   $('ctxDuplicate')?.addEventListener('click', () => {
     const task = Store.getTask(_ctxTargetId);
     if (!task) return;
-    const copy = { 
-      ...task, 
-      id: undefined, 
-      nome: task.nome + ' (cópia)',
-      periodos: JSON.parse(JSON.stringify(task.periodos || []))
+
+    // Copia explicita: cada campo e clonado, sem herdar id nem campos antigos
+    const copy = {
+      grupoId:      task.grupoId || null,
+      edt:          task.edt || '',
+      nome:         task.nome + ' (cópia)',
+      responsaveis: [...(task.responsaveis || [])],
+      periodos:     (task.periodos || []).map(p => ({ inicio: p.inicio, fim: p.fim })),
+      status:       task.status || 'Planejado',
+      pct:          task.pct || 0,
+      local:        task.local || '',
+      tipo:         task.tipo || '',
+      obs:          task.obs || '',
+      detalhes:     JSON.parse(JSON.stringify(task.detalhes || [])),
     };
-    Store.addTask(copy); Store.save(); refresh(); App.renderDashboard();
+
+    const nova = Store.addTask(copy);
+    Store.save();
+    refresh();
+    App.renderDashboard();
     showToast('Tarefa duplicada.','success');
+
+    // Abre a copia ja para edicao das datas
+    if (nova && nova.id) App.openTaskModal(nova.id);
   });
 
   $('ctxAddChild')?.addEventListener('click', () => {
