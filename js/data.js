@@ -163,7 +163,8 @@ const Store = (() => {
 
   function addTask(data) {
     pushUndo();
-    const t = _normalizeTask({ id: genId(), ...data });
+    // O id vem depois do spread para nunca ser sobrescrito por um id vazio
+    const t = _normalizeTask({ ...data, id: (data && data.id) ? data.id : genId() });
     _tasks.push(t);
     _rebuildPeople();
     return t;
