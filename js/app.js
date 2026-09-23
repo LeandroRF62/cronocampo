@@ -173,10 +173,14 @@ function initImportExport() {
 
   // Dados
   document.getElementById('optImportar')?.addEventListener('click', () => {
-    _fecharArq(); fileInput.click();
+    _fecharArq();
+    if (!podeExcluir()) { showToast('Apenas administradores podem importar planilha.', 'error'); return; }
+    fileInput.click();
   });
   document.getElementById('optCarregar')?.addEventListener('click', () => {
-    _fecharArq(); document.getElementById('fileInputJson')?.click();
+    _fecharArq();
+    if (!podeEditar()) { showToast('Voce tem acesso somente leitura.', 'error'); return; }
+    document.getElementById('fileInputJson')?.click();
   });
 
   document.getElementById('btnShowHidden')?.addEventListener('click', () => {
@@ -257,6 +261,11 @@ function initTaskModal() {
 }
 
 function openTaskModal(taskId, defaultGroupId) {
+  // Leitor nao cria tarefa nova
+  if (!podeEditar() && !taskId) {
+    showToast('Voce tem acesso somente leitura.', 'error');
+    return;
+  }
   _editingTaskId = taskId;
   _currentResps  = [];
   _currentPeriodos = [];
@@ -308,9 +317,21 @@ function openTaskModal(taskId, defaultGroupId) {
   renderDetalhesList();
   const _btnGerar = document.getElementById('btnGerarCronograma');
   if (_btnGerar) _btnGerar.style.display = task ? 'flex' : 'none';
-  document.getElementById('btnDeleteTask').style.display = task ? 'flex' : 'none';
+  document.getElementById('btnDeleteTask').style.display = (task && podeExcluir()) ? 'flex' : 'none';
+
+  // Modo somente leitura: trava os campos e esconde o Salvar
+  const _somenteLeitura = !podeEditar();
+  document.querySelectorAll('#modalTask input, #modalTask select, #modalTask textarea')
+    .forEach(el => { el.disabled = _somenteLeitura; });
+  ['btnSaveTask','btnAddPeriodo','btnAddDetalhe'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = _somenteLeitura ? 'none' : '';
+  });
+  const _tituloModal = document.getElementById('modalTitle');
+  if (_tituloModal && _somenteLeitura) _tituloModal.textContent = 'Visualizar Tarefa';
+
   openModal('modalOverlay');
-  document.getElementById('fNome').focus();
+  if (!_somenteLeitura) document.getElementById('fNome').focus();
 }
 
 function addResponsavel(name) {
@@ -478,6 +499,10 @@ function initGroupModal() {
 }
 
 function openGroupModal(groupId) {
+  if (!podeEditar()) {
+    showToast('Voce tem acesso somente leitura.', 'error');
+    return;
+  }
   _editingGroupId = groupId;
   const g = groupId ? Store.getGroup(groupId) : null;
   document.getElementById('groupModalTitle').textContent = g ? 'Editar Grupo/Ramal' : 'Novo Grupo/Ramal';
@@ -522,15 +547,28 @@ function saveGroup() {
    AUTENTICACAO - usuario logado e botao Sair
    ================================================================ */
 function initAuth() {
-  // Mostra o e-mail do usuario logado
-  const user = window.__USUARIO__;
+  const user  = window.__USUARIO__;
+  const nivel = window.__NIVEL__ || 'leitor';
+
+  // ── E-mail e selo do nivel na barra superior ──
   const spanEmail = document.getElementById('userEmail');
   if (spanEmail && user?.email) {
-    spanEmail.textContent = user.email;
-    spanEmail.title = user.email;
+    const selos = {
+      admin:  { txt: 'Admin',   cor: '#2e7d32' },
+      editor: { txt: 'Editor',  cor: '#1565c0' },
+      leitor: { txt: 'Somente leitura', cor: '#e65100' },
+    };
+    const s = selos[nivel] || selos.leitor;
+    spanEmail.innerHTML =
+      '<span style="display:block;line-height:1.25">' + escHtml(user.email) + '</span>' +
+      '<span style="display:inline-block;margin-top:1px;padding:0 6px;border-radius:9px;' +
+      'background:' + s.cor + ';color:#fff;font-size:8.5px;font-weight:700;' +
+      'text-transform:uppercase;letter-spacing:.4px">' + s.txt + '</span>';
+    spanEmail.title = user.email + ' — ' + s.txt;
+    spanEmail.style.maxWidth = '190px';
   }
 
-  // Botao Sair
+  // ── Botao Sair ──
   document.getElementById('btnSair')?.addEventListener('click', async () => {
     if (!confirm('Deseja sair do sistema?')) return;
     try {
@@ -540,6 +578,56 @@ function initAuth() {
     }
     window.location.replace('login.html');
   });
+
+  // ── Aplica as restricoes de nivel ──
+  aplicarPermissoes(nivel);
+}
+
+/* ----------------------------------------------------------------
+   PERMISSOES POR NIVEL
+   admin  -> tudo
+   editor -> cria e edita, mas nao importa planilha nem exclui
+   leitor -> so visualiza e exporta
+   ---------------------------------------------------------------- */
+function podeEditar()  { return ['admin','editor'].includes(window.__NIVEL__ || 'leitor'); }
+function podeExcluir() { return (window.__NIVEL__ || 'leitor') === 'admin'; }
+
+function aplicarPermissoes(nivel) {
+  const editar  = ['admin','editor'].includes(nivel);
+  const admin   = nivel === 'admin';
+  const some    = (id) => { const el = document.getElementById(id); if (el) el.style.display = 'none'; };
+
+  if (!editar) {
+    // Barra superior
+    some('btnSalvar');
+    // Menu Arquivo — mantem so os itens de exportar e o backup
+    some('optImportar');
+    some('optCarregar');
+    // Barra de ferramentas do Gantt
+    some('btnAddGroup');
+    some('btnAddTaskInline');
+    // Aba Equipe
+    some('btnAddColaborador');
+
+    // Barra de aviso no topo
+    if (!document.getElementById('avisoLeitura')) {
+      const aviso = document.createElement('div');
+      aviso.id = 'avisoLeitura';
+      aviso.style.cssText =
+        'background:#fff3e0;border-bottom:1px solid #ffcc80;color:#e65100;' +
+        'padding:7px 16px;font-size:12px;font-weight:600;display:flex;' +
+        'align-items:center;gap:8px;flex-shrink:0';
+      aviso.innerHTML =
+        '<i class="fas fa-eye"></i> Modo somente leitura — voce pode consultar e exportar, mas nao alterar o cronograma.';
+      const main = document.querySelector('.main-content');
+      if (main && main.parentNode) main.parentNode.insertBefore(aviso, main);
+    }
+  }
+
+  if (!admin) {
+    // So admin importa planilha (sobrescreve tudo)
+    some('optImportar');
+  }
 }
 
 /* ================================================================
@@ -548,6 +636,7 @@ function initAuth() {
 function initSalvar() {
   // Botão Salvar → salva na nuvem (Supabase)
   document.getElementById('btnSalvar')?.addEventListener('click', async () => {
+    if (!podeEditar()) { showToast('Voce tem acesso somente leitura.', 'error'); return; }
     const dados = Store.toJSON();
     Store.save(); // cache local (offline)
 
