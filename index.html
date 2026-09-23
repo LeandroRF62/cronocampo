@@ -26,6 +26,21 @@
       const { data } = await supabaseClient.auth.getSession();
       if (!data || !data.session) { window.location.replace("login.html"); return; }
       window.__USUARIO__ = data.session.user;
+
+      // Busca o nivel do usuario (admin / editor / leitor)
+      try {
+        const { data: perfil } = await supabaseClient
+          .from('perfis')
+          .select('nivel, nome')
+          .eq('id', data.session.user.id)
+          .maybeSingle();
+        window.__NIVEL__ = perfil?.nivel || 'leitor';
+        window.__NOME__  = perfil?.nome  || '';
+      } catch (e) {
+        console.error("Erro ao buscar perfil:", e);
+        window.__NIVEL__ = 'leitor';   // na duvida, o mais restrito
+      }
+
       document.documentElement.style.visibility = "visible";
     } catch (e) {
       console.error("Erro na verificacao de sessao:", e);
