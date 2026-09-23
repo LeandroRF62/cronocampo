@@ -55,6 +55,10 @@ const DOW_INICIAIS = ['D','S','T','Q','Q','S','S'];
 const Gantt = (() => {
 
   /* ---- Config ---- */
+  // Permissoes (definidas em app.js; fallback seguro se ainda nao carregou)
+  const _podeEditar  = () => (typeof podeEditar  === 'function') ? podeEditar()  : true;
+  const _podeExcluir = () => (typeof podeExcluir === 'function') ? podeExcluir() : true;
+
   let COL_W = 28;
   let selectedTaskId = null;
   let tooltipEl = null;
@@ -175,8 +179,9 @@ const Gantt = (() => {
           </div>
           <div class="row-actions">
             <button class="act-btn ${g.hidden ? 'hidden-eye' : ''}" data-action="toggle-hide-group" data-id="${g.id}" title="${g.hidden ? 'Mostrar grupo' : 'Ocultar grupo'}"><i class="fas ${g.hidden ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
+            ${_podeEditar() ? `
             <button class="act-btn" data-action="edit-group" data-id="${g.id}" title="Editar grupo"><i class="fas fa-edit"></i></button>
-            <button class="act-btn" data-action="add-child" data-gid="${g.id}" title="Adicionar tarefa"><i class="fas fa-plus"></i></button>
+            <button class="act-btn" data-action="add-child" data-gid="${g.id}" title="Adicionar tarefa"><i class="fas fa-plus"></i></button>` : ''}
           </div>
         `;
       } else {
@@ -196,8 +201,8 @@ const Gantt = (() => {
           </div>
           <div class="row-actions">
             <button class="act-btn ${t.hidden ? 'hidden-eye' : ''}" data-action="toggle-hide-task" data-id="${t.id}" title="${t.hidden ? 'Mostrar atividade' : 'Ocultar atividade'}"><i class="fas ${t.hidden ? 'fa-eye-slash' : 'fa-eye'}"></i></button>
-            <button class="act-btn" data-action="edit-task" data-id="${t.id}" title="Editar"><i class="fas fa-edit"></i></button>
-            <button class="act-btn del" data-action="delete-task" data-id="${t.id}" title="Excluir"><i class="fas fa-trash"></i></button>
+            ${_podeEditar() ? `<button class="act-btn" data-action="edit-task" data-id="${t.id}" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
+            ${_podeExcluir() ? `<button class="act-btn del" data-action="delete-task" data-id="${t.id}" title="Excluir"><i class="fas fa-trash"></i></button>` : ''}
           </div>
         `;
       }
@@ -207,7 +212,7 @@ const Gantt = (() => {
       div.addEventListener('contextmenu', (e) => handleCtxMenu(e, type, data.id));
 
       // Drag & drop — grupos
-      if (type === 'group') {
+      if (type === 'group' && _podeEditar()) {
         div.draggable = true;
 
         div.addEventListener('dragstart', e => {
@@ -242,7 +247,7 @@ const Gantt = (() => {
       }
 
       // Drag & drop reorder (tarefas dentro de grupo)
-      if (type === 'task' && data.grupoId) {
+      if (type === 'task' && data.grupoId && _podeEditar()) {
         div.draggable = true;
 
         div.addEventListener('dragstart', e => {
@@ -312,10 +317,11 @@ const Gantt = (() => {
       refresh();
       return;
     }
-    if (action === 'edit-group')   { App.openGroupModal(eid); return; }
+    if (action === 'edit-group')   { if (_podeEditar()) App.openGroupModal(eid); return; }
     if (action === 'edit-task')    { App.openTaskModal(eid);  return; }
     if (action === 'add-child')    { App.openTaskModal(null, gid); return; }
     if (action === 'delete-task')  {
+      if (!_podeExcluir()) { showToast('Apenas administradores podem excluir.','error'); return; }
       if (confirm('Excluir esta tarefa?')) {
         Store.deleteTask(eid);
         Store.save();
@@ -567,8 +573,8 @@ function renderChartBody(rows, vStart, numDays, today) {
           bar.appendChild(prog);
         }
 
-        // Resize handles (apenas no último período para simplificar)
-        if (idx === periodos.length - 1) {
+        // Resize handles (apenas no último período, e só para quem pode editar)
+        if (idx === periodos.length - 1 && _podeEditar()) {
           const resL = document.createElement('div'); 
           resL.className = 'bar-resize-l';
           const resR = document.createElement('div'); 
@@ -828,7 +834,17 @@ function renderChartBody(rows, vStart, numDays, today) {
     _ctxTargetId = id;
     const menu     = $('ctxMenu');
     const addChild = $('ctxAddChild');
-    addChild.style.display = type === 'group' ? 'flex' : 'none';
+    addChild.style.display = (type === 'group' && _podeEditar()) ? 'flex' : 'none';
+
+    // Ajusta os itens conforme o nivel
+    const itDup = $('ctxDuplicate');
+    const itDel = $('ctxDelete');
+    const itEdit = $('ctxEdit');
+    if (itDup)  itDup.style.display  = _podeEditar()  ? 'flex' : 'none';
+    if (itDel)  itDel.style.display  = _podeExcluir() ? 'flex' : 'none';
+    if (itEdit) itEdit.innerHTML = _podeEditar()
+      ? '<i class="fas fa-edit"></i> Editar'
+      : '<i class="fas fa-eye"></i> Visualizar';
     menu.style.left = e.clientX + 'px';
     menu.style.top  = e.clientY + 'px';
     menu.classList.add('open');
@@ -846,6 +862,7 @@ function renderChartBody(rows, vStart, numDays, today) {
   });
 
   $('ctxDuplicate')?.addEventListener('click', () => {
+    if (!_podeEditar()) { showToast('Voce tem acesso somente leitura.','error'); return; }
     const task = Store.getTask(_ctxTargetId);
     if (!task) return;
 
@@ -879,6 +896,7 @@ function renderChartBody(rows, vStart, numDays, today) {
   });
 
   $('ctxDelete')?.addEventListener('click', () => {
+    if (!_podeExcluir()) { showToast('Apenas administradores podem excluir.','error'); return; }
     const task = Store.getTask(_ctxTargetId);
     const grp  = Store.getGroup(_ctxTargetId);
     if (task) {
