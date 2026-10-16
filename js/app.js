@@ -461,6 +461,27 @@ function saveTask() {
     }
   }
 
+  // Verifica conflito de agenda: algum responsável já alocado em outra atividade no mesmo período
+  const conflitosFinal = [];
+  _currentResps.forEach(pessoa => {
+    Store.getTasks().forEach(t => {
+      if (t.id === _editingTaskId) return;
+      if (t.status === 'Cancelado') return;
+      if (!(t.responsaveis||[]).includes(pessoa)) return;
+      if (!_periodosConflitam(periodosValidos, t.periodos || [])) return;
+      conflitosFinal.push({ pessoa, tarefa: t });
+    });
+  });
+
+  if (conflitosFinal.length) {
+    const lista = conflitosFinal.map(c => {
+      const per = (c.tarefa.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
+      return `• ${c.pessoa} já está em "${c.tarefa.nome}" (${per})`;
+    }).join('\n');
+    const prosseguir = confirm(`⚠️ Conflito de agenda detectado:\n\n${lista}\n\nDeseja salvar mesmo assim?`);
+    if (!prosseguir) return;
+  }
+
   const data = {
     grupoId:      document.getElementById('fGrupo').value || null,
     nome,
