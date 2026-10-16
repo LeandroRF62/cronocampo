@@ -334,6 +334,35 @@ function openTaskModal(taskId, defaultGroupId) {
   if (!_somenteLeitura) document.getElementById('fNome').focus();
 }
 
+function showConfirmModal(message, title) {
+  return new Promise(resolve => {
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay open';
+    const linhas = String(message).split('\n').map(l => l ? `<div>${escHtml(l)}</div>` : '<div style="height:8px"></div>').join('');
+    overlay.innerHTML = `
+      <div class="modal modal-sm">
+        <div class="modal-header">
+          <h2><i class="fas fa-triangle-exclamation" style="color:#e65100"></i> ${escHtml(title || 'Atenção')}</h2>
+        </div>
+        <div class="modal-body" style="font-size:13px;line-height:1.6;white-space:normal">${linhas}</div>
+        <div class="modal-footer">
+          <div style="flex:1"></div>
+          <button class="btn-outline" id="confirmModalCancel">Cancelar</button>
+          <button class="btn-primary" id="confirmModalOk">Continuar</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+
+    const finish = (result) => { overlay.remove(); resolve(result); };
+    document.getElementById('confirmModalCancel')?.addEventListener('click', () => finish(false));
+    document.getElementById('confirmModalOk')?.addEventListener('click', () => finish(true));
+    overlay.addEventListener('click', e => { if (e.target === overlay) finish(false); });
+    document.addEventListener('keydown', function esc(e) {
+      if (e.key === 'Escape') { document.removeEventListener('keydown', esc); finish(false); }
+    });
+  });
+}
+
 function _periodosConflitam(periodosA, periodosB) {
   return (periodosA||[]).some(a => {
     if (!a.inicio || !a.fim) return false;
@@ -348,7 +377,7 @@ function _periodosConflitam(periodosA, periodosB) {
   });
 }
 
-function addResponsavel(name) {
+async function addResponsavel(name) {
   const clean = name.trim();
   if (!clean || _currentResps.includes(clean)) return;
 
@@ -363,9 +392,12 @@ function addResponsavel(name) {
   if (conflitos.length) {
     const lista = conflitos.map(t => {
       const per = (t.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
-      return `• ${t.nome} (${per})`;
+      return `${t.nome} (${per})`;
     }).join('\n');
-    const prosseguir = confirm(`⚠️ ${clean} já está alocado(a) em outra atividade no mesmo período:\n\n${lista}\n\nDeseja adicionar mesmo assim?`);
+    const prosseguir = await showConfirmModal(
+      `${clean} já está alocado(a) em outra atividade no mesmo período:\n\n${lista}\n\nDeseja adicionar mesmo assim?`,
+      'Conflito de agenda'
+    );
     if (!prosseguir) return;
   }
 
@@ -441,7 +473,7 @@ function renderPeriodosList() {
 /* ================================================================
    SALVAR TAREFA - atualizado para suportar períodos
    ================================================================ */
-function saveTask() {
+async function saveTask() {
   const nome   = document.getElementById('fNome').value.trim();
 
   if (!nome)  { showToast('Informe o nome da tarefa.','error'); document.getElementById('fNome').focus(); return; }
@@ -476,9 +508,12 @@ function saveTask() {
   if (conflitosFinal.length) {
     const lista = conflitosFinal.map(c => {
       const per = (c.tarefa.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
-      return `• ${c.pessoa} já está em "${c.tarefa.nome}" (${per})`;
+      return `${c.pessoa} já está em "${c.tarefa.nome}" (${per})`;
     }).join('\n');
-    const prosseguir = confirm(`⚠️ Conflito de agenda detectado:\n\n${lista}\n\nDeseja salvar mesmo assim?`);
+    const prosseguir = await showConfirmModal(
+      `Conflito de agenda detectado:\n\n${lista}\n\nDeseja salvar mesmo assim?`,
+      'Conflito de agenda'
+    );
     if (!prosseguir) return;
   }
 
