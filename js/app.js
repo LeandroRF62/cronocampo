@@ -337,25 +337,39 @@ function openTaskModal(taskId, defaultGroupId) {
 function showConfirmModal(message, title) {
   return new Promise(resolve => {
     const overlay = document.createElement('div');
-    overlay.className = 'modal-overlay open';
+    overlay.setAttribute('style', [
+      'position:fixed', 'top:0', 'left:0', 'right:0', 'bottom:0', 'width:100vw', 'height:100vh',
+      'background:rgba(0,0,0,.55)', 'z-index:999999',
+      'display:flex', 'align-items:center', 'justify-content:center',
+      'padding:20px', 'box-sizing:border-box'
+    ].join(';'));
+
     const linhas = String(message).split('\n').map(l => l ? `<div>${escHtml(l)}</div>` : '<div style="height:8px"></div>').join('');
-    overlay.innerHTML = `
-      <div class="modal modal-sm">
-        <div class="modal-header">
-          <h2><i class="fas fa-triangle-exclamation" style="color:#e65100"></i> ${escHtml(title || 'Atenção')}</h2>
-        </div>
-        <div class="modal-body" style="font-size:13px;line-height:1.6;white-space:normal">${linhas}</div>
-        <div class="modal-footer">
-          <div style="flex:1"></div>
-          <button class="btn-outline" id="confirmModalCancel">Cancelar</button>
-          <button class="btn-primary" id="confirmModalOk">Continuar</button>
-        </div>
+
+    const box = document.createElement('div');
+    box.setAttribute('style', [
+      'background:#fff', 'border-radius:10px', 'width:460px', 'max-width:100%',
+      'max-height:85vh', 'overflow:auto', 'box-shadow:0 20px 60px rgba(0,0,0,.35)',
+      'display:flex', 'flex-direction:column'
+    ].join(';'));
+
+    box.innerHTML = `
+      <div style="padding:16px 20px;border-bottom:1px solid #e0e0e0;display:flex;align-items:center;gap:8px">
+        <i class="fas fa-triangle-exclamation" style="color:#e65100"></i>
+        <h2 style="margin:0;font-size:16px;font-weight:700">${escHtml(title || 'Atenção')}</h2>
+      </div>
+      <div style="padding:18px 20px;font-size:13px;line-height:1.6;color:#333">${linhas}</div>
+      <div style="padding:14px 20px;border-top:1px solid #e0e0e0;display:flex;justify-content:flex-end;gap:10px">
+        <button id="confirmModalCancel" style="padding:8px 16px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer;font-size:13px">Cancelar</button>
+        <button id="confirmModalOk" style="padding:8px 16px;border-radius:6px;border:none;background:#1565c0;color:#fff;cursor:pointer;font-size:13px;font-weight:600">Continuar</button>
       </div>`;
+
+    overlay.appendChild(box);
     document.body.appendChild(overlay);
 
     const finish = (result) => { overlay.remove(); resolve(result); };
-    document.getElementById('confirmModalCancel')?.addEventListener('click', () => finish(false));
-    document.getElementById('confirmModalOk')?.addEventListener('click', () => finish(true));
+    box.querySelector('#confirmModalCancel')?.addEventListener('click', () => finish(false));
+    box.querySelector('#confirmModalOk')?.addEventListener('click', () => finish(true));
     overlay.addEventListener('click', e => { if (e.target === overlay) finish(false); });
     document.addEventListener('keydown', function esc(e) {
       if (e.key === 'Escape') { document.removeEventListener('keydown', esc); finish(false); }
