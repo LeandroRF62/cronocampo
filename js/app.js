@@ -334,9 +334,41 @@ function openTaskModal(taskId, defaultGroupId) {
   if (!_somenteLeitura) document.getElementById('fNome').focus();
 }
 
+function _periodosConflitam(periodosA, periodosB) {
+  return (periodosA||[]).some(a => {
+    if (!a.inicio || !a.fim) return false;
+    const aIni = dayjs(a.inicio).startOf('day');
+    const aFim = dayjs(a.fim).startOf('day');
+    return (periodosB||[]).some(b => {
+      if (!b.inicio || !b.fim) return false;
+      const bIni = dayjs(b.inicio).startOf('day');
+      const bFim = dayjs(b.fim).startOf('day');
+      return !aFim.isBefore(bIni) && !aIni.isAfter(bFim);
+    });
+  });
+}
+
 function addResponsavel(name) {
   const clean = name.trim();
   if (!clean || _currentResps.includes(clean)) return;
+
+  // Verifica se o colaborador já está alocado em outra atividade no mesmo período
+  const conflitos = Store.getTasks().filter(t => {
+    if (t.id === _editingTaskId) return false;
+    if (t.status === 'Cancelado') return false;
+    if (!(t.responsaveis||[]).includes(clean)) return false;
+    return _periodosConflitam(_currentPeriodos, t.periodos || []);
+  });
+
+  if (conflitos.length) {
+    const lista = conflitos.map(t => {
+      const per = (t.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
+      return `• ${t.nome} (${per})`;
+    }).join('\n');
+    const prosseguir = confirm(`⚠️ ${clean} já está alocado(a) em outra atividade no mesmo período:\n\n${lista}\n\nDeseja adicionar mesmo assim?`);
+    if (!prosseguir) return;
+  }
+
   _currentResps.push(clean);
   renderRespTags();
 }
