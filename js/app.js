@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initSalvar();
   initDrillModal();
   initAuth();
+  initEquipeDisponivel();
 
   document.getElementById('topbarDate').textContent = dayjs().format('ddd DD/MM/YY').replace(/^\w/, c => c.toUpperCase());
 
@@ -1245,6 +1246,164 @@ function renderDashChart(id, type, entries, colorFn, onClickFn) {
   });
 
   _dashCharts[id] = chart;
+}
+
+/* ================================================================
+   CONSULTAR EQUIPE DISPONÍVEL
+   ================================================================ */
+let _edExcludeTaskId = null;
+
+function _normStr(s) {
+  return String(s||'').normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+}
+
+function initEquipeDisponivel() {
+  const overlay = document.getElementById('equipeDisponivelOverlay');
+  if (!overlay) return;
+
+  const close = () => overlay.classList.remove('open');
+  document.getElementById('equipeDisponivelClose')?.addEventListener('click', close);
+  document.getElementById('edFechar')?.addEventListener('click', close);
+  overlay.addEventListener('click', e => { if (e.target === overlay) close(); });
+
+  const dIni = document.getElementById('edDateStart');
+  const dFim = document.getElementById('edDateEnd');
+  const busca = document.getElementById('edBuscaNome');
+
+  const rerun = () => renderEquipeDisponivel();
+  dIni?.addEventListener('change', rerun);
+  dFim?.addEventListener('change', rerun);
+  busca?.addEventListener('input', rerun);
+
+  const atalho = (dias) => {
+    const hoje = dayjs();
+    dIni.value = hoje.format('YYYY-MM-DD');
+    dFim.value = dias === 0 ? hoje.format('YYYY-MM-DD') : hoje.add(dias, 'day').format('YYYY-MM-DD');
+    rerun();
+  };
+  document.getElementById('edAtalhoHoje')?.addEventListener('click', () => atalho(0));
+  document.getElementById('edAtalho7')?.addEventListener('click',   () => atalho(7));
+  document.getElementById('edAtalho15')?.addEventListener('click',  () => atalho(15));
+  document.getElementById('edAtalho30')?.addEventListener('click',  () => atalho(30));
+  document.getElementById('edAtalho60')?.addEventListener('click',  () => atalho(60));
+
+  document.getElementById('btnEquipeDisponivel')?.addEventListener('click', () => {
+    _edExcludeTaskId = null;
+    const hoje = dayjs();
+    dIni.value = hoje.format('YYYY-MM-DD');
+    dFim.value = hoje.add(7, 'day').format('YYYY-MM-DD');
+    busca.value = '';
+    overlay.classList.add('open');
+    renderEquipeDisponivel();
+  });
+
+  // Atalho dentro do modal de Nova/Editar Tarefa
+  document.getElementById('btnVerificarEquipeLivre')?.addEventListener('click', () => {
+    const validos = (_currentPeriodos||[]).filter(p => p.inicio && p.fim);
+    if (validos.length) {
+      dIni.value = validos.reduce((min, p) => p.inicio < min ? p.inicio : min, validos[0].inicio);
+      dFim.value = validos.reduce((max, p) => p.fim > max ? p.fim : max, validos[0].fim);
+    } else {
+      const hoje = dayjs();
+      dIni.value = hoje.format('YYYY-MM-DD');
+      dFim.value = hoje.add(7, 'day').format('YYYY-MM-DD');
+    }
+    busca.value = '';
+    _edExcludeTaskId = _editingTaskId || null;
+    overlay.classList.add('open');
+    renderEquipeDisponivel();
+  });
+}
+
+function renderEquipeDisponivel() {
+  const el = document.getElementById('edResultado');
+  if (!el) return;
+
+  const dIniVal = document.getElementById('edDateStart')?.value;
+  const dFimVal = document.getElementById('edDateEnd')?.value;
+  const termo = _normStr(document.getElementById('edBuscaNome')?.value || '');
+
+  if (!dIniVal || !dFimVal) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Selecione o período.</div>';
+    return;
+  }
+  if (dayjs(dFimVal).isBefore(dayjs(dIniVal))) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#c62828;font-size:12px">A data final deve ser após a data inicial.</div>';
+    return;
+  }
+
+  const periodoConsulta = [{ inicio: dIniVal, fim: dFimVal }];
+  const tasks  = Store.getTasks();
+  const roster = Store.getRoster()
+    .filter(p => !termo || _normStr(p).includes(termo))
+    .slice()
+    .sort((a,b) => a.localeCompare(b, 'pt-BR'));
+
+  if (!roster.length) {
+    el.innerHTML = '<div style="padding:20px;text-align:center;color:#9e9e9e;font-size:12px">Nenhum colaborador encontrado.</div>';
+    return;
+  }
+
+  const disponiveis = [];
+  const alocados    = [];
+
+  roster.forEach(person => {
+    const conflitos = tasks.filter(t => {
+      if (t.id === _edExcludeTaskId) return false;
+      if (t.status === 'Cancelado') return false;
+      if (!(t.responsaveis||[]).includes(person)) return false;
+      return _periodosConflitam(periodoConsulta, t.periodos || []);
+    });
+    if (conflitos.length) alocados.push({ person, conflitos });
+    else disponiveis.push(person);
+  });
+
+  const statusBadge = (status) => {
+    const cor = Store.STATUS_COLORS[status] || '#90a4ae';
+    return `<span style="display:inline-block;padding:1px 7px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:${cor};margin-left:6px">${escHtml(status)}</span>`;
+  };
+
+  let html = '';
+
+  html += `<div style="font-size:12px;font-weight:700;color:#2e7d32;margin-bottom:6px">
+    <i class="fas fa-circle-check"></i> Disponíveis (${disponiveis.length})
+  </div>`;
+  html += disponiveis.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">${disponiveis.map(p => `
+        <div style="display:flex;align-items:center;gap:6px;background:#e8f5e9;border:1px solid #c8e6c9;border-radius:20px;padding:4px 10px 4px 4px">
+          <div class="bar-avatar" style="background:${Store.getPersonColor(p)};width:20px;height:20px;font-size:9px">${Store.personInitials(p)}</div>
+          <span style="font-size:12px">${escHtml(p)}</span>
+        </div>`).join('')}</div>`
+    : '<div style="padding:10px 0 16px;color:#9e9e9e;font-size:12px">Nenhum colaborador livre neste período.</div>';
+
+  html += `<div style="font-size:12px;font-weight:700;color:#e65100;margin-bottom:6px">
+    <i class="fas fa-triangle-exclamation"></i> Alocados (${alocados.length})
+  </div>`;
+  html += alocados.length
+    ? alocados.map(({person, conflitos}) => `
+        <div style="border:1px solid #eee;border-radius:8px;padding:8px 10px;margin-bottom:6px">
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+            <div class="bar-avatar" style="background:${Store.getPersonColor(person)};width:20px;height:20px;font-size:9px">${Store.personInitials(person)}</div>
+            <span style="font-size:12px;font-weight:700">${escHtml(person)}</span>
+          </div>
+          ${conflitos.map(t => {
+            const per = (t.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
+            return `<div class="ed-task-link" data-taskid="${t.id}" style="cursor:pointer;font-size:11px;color:#546e7a;padding:2px 0 2px 26px">
+              • ${escHtml(t.nome)} ${statusBadge(t.status)}<br>
+              <span style="padding-left:12px;color:#90a4ae">${per}</span>
+            </div>`;
+          }).join('')}
+        </div>`).join('')
+    : '<div style="padding:10px 0;color:#9e9e9e;font-size:12px">Ninguém alocado neste período.</div>';
+
+  el.innerHTML = html;
+
+  el.querySelectorAll('[data-taskid]').forEach(row => {
+    row.addEventListener('click', () => {
+      document.getElementById('equipeDisponivelOverlay')?.classList.remove('open');
+      openTaskModal(row.dataset.taskid);
+    });
+  });
 }
 
 /* ================================================================
