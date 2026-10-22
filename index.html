@@ -163,6 +163,7 @@
       <i class="fas fa-search"></i>
       <input type="text" id="ganttSearch" placeholder="Buscar tarefa ou responsável…"/>
     </div>
+    <button class="btn-sm" id="btnEquipeDisponivel"><i class="fas fa-user-check"></i> Consultar Equipe Disponível</button>
   </div>
   <div class="toolbar-right">
     <label class="toolbar-label">De:</label>
@@ -271,7 +272,12 @@
       </div>
       <div class="form-row">
         <div class="form-group full">
-          <label>Equipe <span class="hint">(clique para selecionar da equipe cadastrada)</span></label>
+          <label style="display:flex;align-items:center;justify-content:space-between">
+            <span>Equipe <span class="hint">(clique para selecionar da equipe cadastrada)</span></span>
+            <button type="button" class="btn-sm" id="btnVerificarEquipeLivre" style="font-size:11px;padding:3px 10px">
+              <i class="fas fa-user-check"></i> Verificar equipe livre
+            </button>
+          </label>
           <div class="resp-input-wrap">
             <input type="text" id="fRespInput" placeholder="Clique para selecionar…" readonly style="cursor:pointer"/>
             <div class="resp-suggestions" id="respSuggestions"></div>
@@ -468,6 +474,46 @@
     <div class="modal-footer">
       <div style="flex:1"></div>
       <button class="btn-outline" id="drillCloseBtn">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- =================== MODAL: EQUIPE DISPONÍVEL =================== -->
+<div class="modal-overlay" id="equipeDisponivelOverlay">
+  <div class="modal" style="width:620px">
+    <div class="modal-header">
+      <h2><i class="fas fa-user-check" style="color:var(--primary)"></i> Consultar Equipe Disponível</h2>
+      <button class="modal-close" id="equipeDisponivelClose"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body" style="padding:16px 20px">
+      <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:10px">
+        <div class="form-group" style="margin:0">
+          <label>De</label>
+          <input type="date" id="edDateStart" class="select-sm" style="width:150px"/>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label>Até</label>
+          <input type="date" id="edDateEnd" class="select-sm" style="width:150px"/>
+        </div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap">
+          <button class="btn-sm" id="edAtalhoHoje">Hoje</button>
+          <button class="btn-sm" id="edAtalho7">7 dias</button>
+          <button class="btn-sm" id="edAtalho15">15 dias</button>
+          <button class="btn-sm" id="edAtalho30">30 dias</button>
+          <button class="btn-sm" id="edAtalho60">60 dias</button>
+        </div>
+      </div>
+      <div class="form-group" style="margin-bottom:12px">
+        <div class="search-wrap" style="width:100%">
+          <i class="fas fa-search"></i>
+          <input type="text" id="edBuscaNome" placeholder="Buscar colaborador por nome…"/>
+        </div>
+      </div>
+      <div id="edResultado"></div>
+    </div>
+    <div class="modal-footer">
+      <div style="flex:1"></div>
+      <button class="btn-outline" id="edFechar">Fechar</button>
     </div>
   </div>
 </div>
