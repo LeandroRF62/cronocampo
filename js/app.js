@@ -335,7 +335,8 @@ function openTaskModal(taskId, defaultGroupId) {
   if (!_somenteLeitura) document.getElementById('fNome').focus();
 }
 
-function showConfirmModal(message, title) {
+function showConfirmModal(message, title, opts) {
+  opts = opts || {};
   return new Promise(resolve => {
     const overlay = document.createElement('div');
     overlay.setAttribute('style', [
@@ -345,11 +346,13 @@ function showConfirmModal(message, title) {
       'padding:20px', 'box-sizing:border-box'
     ].join(';'));
 
-    const linhas = String(message).split('\n').map(l => l ? `<div>${escHtml(l)}</div>` : '<div style="height:8px"></div>').join('');
+    const linhas = opts.html
+      ? String(message)
+      : String(message).split('\n').map(l => l ? `<div>${escHtml(l)}</div>` : '<div style="height:8px"></div>').join('');
 
     const box = document.createElement('div');
     box.setAttribute('style', [
-      'background:#fff', 'border-radius:10px', 'width:460px', 'max-width:100%',
+      'background:#fff', 'border-radius:10px', 'width:520px', 'max-width:100%',
       'max-height:85vh', 'overflow:auto', 'box-shadow:0 20px 60px rgba(0,0,0,.35)',
       'display:flex', 'flex-direction:column'
     ].join(';'));
@@ -376,6 +379,38 @@ function showConfirmModal(message, title) {
       if (e.key === 'Escape') { document.removeEventListener('keydown', esc); finish(false); }
     });
   });
+}
+
+function _fmtPeriodos(periodos) {
+  const v = (periodos||[]).filter(p => p.inicio && p.fim);
+  if (!v.length) return 'sem período definido';
+  return v.map(p => `${dayjs(p.inicio).format('DD/MM/YYYY')} a ${dayjs(p.fim).format('DD/MM/YYYY')}`).join(', ');
+}
+
+// Monta o HTML do alerta de conflito, deixando claro onde a pessoa JÁ está e qual atividade está sendo editada
+function _htmlConflito(pessoasConflitos, periodosAtuais, pergunta) {
+  const nomeAtual = (document.getElementById('fNome')?.value || '').trim() || '(nova atividade sem nome)';
+  const card = (cor, fundo) => `border-left:4px solid ${cor};background:${fundo};border-radius:6px;padding:8px 12px;margin:6px 0`;
+  let html = '';
+  pessoasConflitos.forEach(({ pessoa, tarefas }) => {
+    html += `<div style="margin-bottom:6px"><b>${escHtml(pessoa)}</b> já está alocado(a) no mesmo período em:</div>`;
+    tarefas.forEach(t => {
+      const cor = Store.STATUS_COLORS[t.status] || '#90a4ae';
+      html += `<div style="${card('#e65100', '#fff3e0')}">
+        <div style="font-weight:700">${escHtml(t.nome)}</div>
+        <div style="font-size:12px;color:#546e7a">${escHtml(_fmtPeriodos(t.periodos))}
+          <span style="display:inline-block;margin-left:6px;padding:0 7px;border-radius:10px;font-size:10px;font-weight:700;color:#fff;background:${cor}">${escHtml(t.status||'')}</span>
+        </div>
+      </div>`;
+    });
+  });
+  html += `<div style="margin-top:12px;font-size:12px;color:#757575">Atividade que você está editando:</div>
+    <div style="${card('#1565c0', '#e3f2fd')}">
+      <div style="font-weight:700">${escHtml(nomeAtual)}</div>
+      <div style="font-size:12px;color:#546e7a">${escHtml(_fmtPeriodos(periodosAtuais))}</div>
+    </div>
+    <div style="margin-top:12px">${escHtml(pergunta)}</div>`;
+  return html;
 }
 
 function _periodosConflitam(periodosA, periodosB) {
@@ -405,13 +440,10 @@ async function addResponsavel(name) {
   });
 
   if (conflitos.length) {
-    const lista = conflitos.map(t => {
-      const per = (t.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
-      return `${t.nome} (${per})`;
-    }).join('\n');
     const prosseguir = await showConfirmModal(
-      `${clean} já está alocado(a) em outra atividade no mesmo período:\n\n${lista}\n\nDeseja adicionar mesmo assim?`,
-      'Conflito de agenda'
+      _htmlConflito([{ pessoa: clean, tarefas: conflitos }], _currentPeriodos, 'Deseja adicionar mesmo assim?'),
+      'Conflito de agenda',
+      { html: true }
     );
     if (!prosseguir) return;
   }
@@ -521,13 +553,16 @@ async function saveTask() {
   });
 
   if (conflitosFinal.length) {
-    const lista = conflitosFinal.map(c => {
-      const per = (c.tarefa.periodos||[]).map(p => `${p.inicio||'—'} → ${p.fim||'—'}`).join(', ');
-      return `${c.pessoa} já está em "${c.tarefa.nome}" (${per})`;
-    }).join('\n');
+    const porPessoa = [];
+    conflitosFinal.forEach(c => {
+      let g = porPessoa.find(x => x.pessoa === c.pessoa);
+      if (!g) { g = { pessoa: c.pessoa, tarefas: [] }; porPessoa.push(g); }
+      g.tarefas.push(c.tarefa);
+    });
     const prosseguir = await showConfirmModal(
-      `Conflito de agenda detectado:\n\n${lista}\n\nDeseja salvar mesmo assim?`,
-      'Conflito de agenda'
+      _htmlConflito(porPessoa, periodosValidos, 'Deseja salvar mesmo assim?'),
+      'Conflito de agenda',
+      { html: true }
     );
     if (!prosseguir) return;
   }
